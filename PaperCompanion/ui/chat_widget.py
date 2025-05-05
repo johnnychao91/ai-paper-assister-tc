@@ -266,7 +266,7 @@ class ChatWidget(QWidget):
         
         # 创建文本输入框
         self.message_input = QTextEdit()
-        self.message_input.setPlaceholderText("请输入您的问题...")
+        self.message_input.setPlaceholderText("請輸入您的問題...")
         self.message_input.setMaximumHeight(100)
         self.message_input.setObjectName("messageInput")
         self.message_input.setStyleSheet("""
@@ -312,7 +312,7 @@ class ChatWidget(QWidget):
         Returns:
             QPushButton: 配置好的发送按钮
         """
-        send_button = QPushButton("发送")
+        send_button = QPushButton("傳送")
         send_button.setCursor(Qt.CursorShape.PointingHandCursor)
         send_button.setObjectName("sendButton")
         send_button.setFixedHeight(36)  # 增加高度
@@ -396,7 +396,7 @@ class ChatWidget(QWidget):
         else:
             # 使用默认响应
             QTimer.singleShot(500, lambda: self.receive_ai_message(
-                f"我已收到您的问题：{message}\n\nAI控制器未连接，无法获取具体响应。"))
+                f"我已收到您的問題：{message}\n\nAI控制器未連接，無法取得具體回應。"))
     
     def receive_ai_message(self, message):
         """
@@ -416,7 +416,7 @@ class ChatWidget(QWidget):
         """处理单句AI响应"""
         # 如果请求ID不匹配当前活动请求，忽略这句话
         if request_id != self.active_request_id:
-            print(f"忽略过时请求的句子: '{sentence[:20]}...' (请求ID: {request_id})")
+            print(f"忽略過時請求的句子: '{sentence[:20]}...' (請求ID: {request_id})")
             return
             
         # 如果有加载动画且这是第一个句子，移除加载动画

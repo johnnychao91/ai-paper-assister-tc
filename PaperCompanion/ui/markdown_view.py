@@ -431,15 +431,15 @@ class MarkdownView(QWebEngineView):
                 self.current_visible_content = data
                 
             except json.JSONDecodeError as e:
-                print(f"解析可见内容数据失败: {e}")
+                print(f"解析可見內容資料失敗: {e}")
         else:
-            print("获取可见内容失败: 空结果")
+            print("取得可見內容失敗: 空結果")
     
     def _handle_scroll_result(self, found):
         """处理滚动操作的结果"""
         if not found:
             # 如果没有找到匹配内容，可以显示提示
-            print("未找到匹配的内容")
+            print("未找到符合的內容")
     
     def load_markdown(self, md_content, lang="zh", render=True):
         """
@@ -507,7 +507,7 @@ class MarkdownView(QWebEngineView):
         # 检查当前语言是否有内容
         if not self.docs[self.current_lang]:
             # 如果当前语言没有内容，显示简单提示
-            html_content = f"<p>没有可用的{self.current_lang}内容</p>" if self.current_lang == "zh" else "<p>No content available in English</p>"
+            html_content = f"<p>沒有可用的{self.current_lang}內容</p>" if self.current_lang == "zh" else "<p>No content available in English</p>"
         else:
             # 预处理Markdown内容，处理图片路径
             content = self.docs[self.current_lang]
@@ -696,7 +696,7 @@ class MarkdownView(QWebEngineView):
         """
         
         if not target_content:
-            print("没有目标内容，无法滚动")
+            print("沒有目標內容，無法捲動")
             return
             
         # 清理LaTeX和HTML标签，准备搜索

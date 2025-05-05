@@ -60,12 +60,12 @@ class AIManager(QObject):
     
     def cancel_current_response(self):
         """取消当前正在生成的AI响应"""
-        print("取消当前的AI响应...")
+        print("取消目前的AI回應...")
         
         # 处理已收集的部分响应
         # 只有当有实际内容时才添加到历史记录
         if self.accumulated_response and self.accumulated_response.strip():
-            print(f"保存已生成的部分响应到对话历史: {self.accumulated_response[:30]}...")
+            print(f"將已產生的部分回應儲存到對話歷史: {self.accumulated_response[:30]}...")
             # 将已生成的部分添加到对话历史
             if hasattr(self.ai_chat, 'conversation_history'):
                 # 添加到对话历史
@@ -101,19 +101,19 @@ class AIManager(QObject):
             
             # 确保线程不在运行状态
             if self.ai_response_thread.isRunning():
-                print("等待上一个AI响应线程结束...")
+                print("等待上一個AI響應線程結束...")
                 self.ai_response_thread.requestInterruption()
                 self.ai_response_thread.wait(1000)  # 等待最多1秒
                 
                 # 如果线程仍在运行，创建新的线程
                 if self.ai_response_thread.isRunning():
-                    print("创建新的AI响应线程...")
+                    print("建立新的AI響應線程...")
                     self._init_ai_assistant()
             
             # 生成新的请求ID
             request_id = str(QUuid.createUuid().toString(QUuid.StringFormat.Id128))
             self.current_request_id = request_id
-            print(f"创建新的AI请求，ID: {request_id}")
+            print(f"建立新的AI請求，ID: {request_id}")
             
             # 确保有论文上下文(如果必要)
             if not paper_id and self.data_manager and self.data_manager.current_paper:
@@ -137,10 +137,10 @@ class AIManager(QObject):
             # 返回请求ID，以便调用者可以使用
             return request_id
         except Exception as e:
-            print(f"AI响应生成失败: {str(e)}")
+            print(f"AI回應生成失敗: {str(e)}")
             self.is_generating_response = False
             self.current_request_id = None
-            self.ai_response_ready.emit(f"抱歉，处理您的问题时出现错误: {str(e)}")
+            self.ai_response_ready.emit(f"抱歉，處理您的問題時出現錯誤: {str(e)}")
             return None
 
     def _on_ai_response_ready(self, response):
@@ -181,7 +181,7 @@ class AIManager(QObject):
     def init_rag_retriever(self, base_path):
         """在后台初始化RAG检索器"""
         try:
-            print(f"[INFO] 开始初始化RAG检索器: {base_path}")
+            print(f"[INFO] 開始初始化RAG檢索器: {base_path}")
             
             # 创建RAG检索器并开始后台加载
             self.retriever = RagRetriever(base_path)
@@ -189,7 +189,7 @@ class AIManager(QObject):
             # 确保AI聊天模块使用相同的检索器
             if hasattr(self, 'ai_chat') and self.ai_chat:
                 if self.ai_chat.retriever is not None:
-                    print("[INFO] 替换AI聊天模块中的旧检索器")
+                    print("[INFO] 取代AI聊天模組中的舊檢索器")
                 self.ai_chat.retriever = self.retriever
             
             # 连接加载完成信号以进行日志记录
@@ -197,18 +197,18 @@ class AIManager(QObject):
             
             return True
         except Exception as e:
-            print(f"[ERROR] 初始化RAG检索器失败: {str(e)}")
+            print(f"[ERROR] 初始化RAG檢索器失敗: {str(e)}")
             return False
 
     def _on_retriever_loaded(self, success):
         """处理检索器加载完成事件"""
         if success:
-            print(f"[INFO] RAG检索器加载完成，共加载了 {len(self.retriever.paper_vector_paths)} 篇论文的向量库索引")
+            print(f"[INFO] RAG檢索器載入完成，總共載入了 {len(self.retriever.paper_vector_paths)} 篇論文的向量庫索引")
             
             # 可以添加额外验证代码
             for paper_id, path in self.retriever.paper_vector_paths.items():
                 if not os.path.exists(path):
-                    print(f"[WARNING] 论文 {paper_id} 的向量库路径不存在: {path}")
+                    print(f"[WARNING] 论文 {paper_id} 的向量庫路徑不存在: {path}")
         else:
             print("[ERROR] RAG检索器加载失败或没有找到论文")
 

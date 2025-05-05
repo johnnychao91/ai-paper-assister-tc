@@ -66,13 +66,13 @@ class UploadWidget(QWidget):
         upload_button_layout.setContentsMargins(10, 0, 10, 0)
         
         # 上传按钮标题
-        self.upload_title = QLabel("上传论文")
+        self.upload_title = QLabel("上傳論文")
         self.upload_title.setFont(QFont("Source Han Sans SC", 11, QFont.Weight.Bold))
         self.upload_title.setStyleSheet("color: white; font-weight: bold;")
         
         # 上传按钮
         self.upload_button = QPushButton("📄")
-        self.upload_button.setToolTip("上传论文文件")
+        self.upload_button.setToolTip("上傳論文文件")
         self.upload_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.upload_button.setStyleSheet("""
             QPushButton {
@@ -91,7 +91,7 @@ class UploadWidget(QWidget):
         
         # 展开按钮
         self.expand_upload_button = QPushButton("▲")
-        self.expand_upload_button.setToolTip("显示上传详情")
+        self.expand_upload_button.setToolTip("顯示上傳詳情")
         self.expand_upload_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.expand_upload_button.setStyleSheet("""
             QPushButton {
@@ -133,7 +133,7 @@ class UploadWidget(QWidget):
         
         # 当前处理文件
         current_file_layout = QHBoxLayout()
-        current_file_label = QLabel("当前文件:")
+        current_file_label = QLabel("目前文件:")
         current_file_label.setStyleSheet("font-weight: bold;")
         self.current_file_name = QLabel("无")
         self.current_file_name.setStyleSheet("color: #1a237e;")
@@ -142,7 +142,7 @@ class UploadWidget(QWidget):
         
         # 当前处理阶段
         stage_layout = QHBoxLayout()
-        stage_label = QLabel("处理阶段:")
+        stage_label = QLabel("處理階段:")
         stage_label.setStyleSheet("font-weight: bold;")
         self.stage_name = QLabel("无")
         self.stage_name.setStyleSheet("color: #1a237e;")
@@ -151,7 +151,7 @@ class UploadWidget(QWidget):
         
         # 处理进度条
         progress_layout = QVBoxLayout()
-        progress_bar_label = QLabel("处理进度:")
+        progress_bar_label = QLabel("處理進度:")
         progress_bar_label.setStyleSheet("font-weight: bold;")
         self.progress_bar = QProgressBar()
         self.progress_bar.setStyleSheet("""
@@ -173,7 +173,7 @@ class UploadWidget(QWidget):
         
         # 待处理文件
         pending_layout = QHBoxLayout()
-        pending_label = QLabel("待处理文件:")
+        pending_label = QLabel("待處理文件:")
         pending_label.setStyleSheet("font-weight: bold;")
         self.pending_count = QLabel("0")
         self.pending_count.setStyleSheet("color: #1a237e;")
@@ -182,7 +182,7 @@ class UploadWidget(QWidget):
         
         # 控制按钮
         controls_layout = QHBoxLayout()
-        self.pause_button = QPushButton("暂停")
+        self.pause_button = QPushButton("暫停")
         self.pause_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.pause_button.setStyleSheet("""
             QPushButton {
@@ -203,7 +203,7 @@ class UploadWidget(QWidget):
         self.pause_button.clicked.connect(self.on_pause_clicked)
         self.pause_button.setEnabled(False)  # 初始状态下禁用暂停按钮
         
-        self.resume_button = QPushButton("继续")
+        self.resume_button = QPushButton("繼續")
         self.resume_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.resume_button.setStyleSheet("""
             QPushButton {
@@ -251,12 +251,12 @@ class UploadWidget(QWidget):
         # 更新按钮文本
         if self.is_details_expanded:
             self.expand_upload_button.setText("▼")
-            self.expand_upload_button.setToolTip("隐藏上传详情")
+            self.expand_upload_button.setToolTip("隱藏上傳詳情")
             # 显示详情面板
             self.upload_details.setVisible(True)
         else:
             self.expand_upload_button.setText("▲")
-            self.expand_upload_button.setToolTip("显示上传详情")
+            self.expand_upload_button.setToolTip("顯示上傳詳情")
             # 动画结束后隐藏详情面板
             self.details_animation.finished.connect(
                 lambda: self.upload_details.setVisible(False)
@@ -269,8 +269,8 @@ class UploadWidget(QWidget):
         """显示文件选择对话框"""
         options = QFileDialog.Option.ReadOnly
         file_paths, _ = QFileDialog.getOpenFileNames(
-            self, "选择要上传的论文PDF文件 / ZIP 文件（存档文件）", "",
-            "PDF 论文 (*.pdf);;ZIP 存档 (*.zip)", options=options
+            self, "選擇要上傳的論文PDF檔案 / ZIP 檔案（存檔檔案）", "",
+            "PDF 論文 (*.pdf);;ZIP 檔案 (*.zip)", options=options
         )
         for file_path in file_paths:
             # 处理每个文件路径
@@ -294,8 +294,8 @@ class UploadWidget(QWidget):
             # 显示错误消息框
             msg_box = QMessageBox(self)
             msg_box.setIcon(QMessageBox.Icon.Critical)
-            msg_box.setWindowTitle("错误")
-            msg_box.setText("请选择有效的PDF或ZIP文件。")
+            msg_box.setWindowTitle("錯誤")
+            msg_box.setText("請選擇有效的PDF或ZIP檔。")
             msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg_box.exec()
                     
@@ -360,7 +360,7 @@ class UploadWidget(QWidget):
                 .astimezone(LOCAL_ZONE)                          # convert to local
                 .strftime("%H:%M")                               # format
             )
-            msg_box.setText(f"当前折扣API暂不可用（服务时间为当地时间 {utc_to_local(time(16, 30))} 至 {utc_to_local(time(0, 30))}）。您确定要继续吗？")
+            msg_box.setText(f"目前折扣API暫不可用（服務時間為當地時間 {utc_to_local(time(16, 30))} 至 {utc_to_local(time(0, 30))}）。您確定要繼續嗎？")
             msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             response = msg_box.exec()
 
@@ -377,10 +377,13 @@ class UploadWidget(QWidget):
         """检查当前折扣API是否可用"""
         # 这里可以添加逻辑来检查当前折扣API的可用性
         # 例如，检查是否有可用的API密钥或是否达到使用限制
+        return True  # 默认返回True，表示可用
+        """
         current_time = datetime.now(timezone.utc).time()
         if time(16, 30) <= current_time or current_time <= time(0, 30):
             return True
         return False
+        """
         
     def set_title_visible(self, visible):
         """设置标题是否可见"""

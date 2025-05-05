@@ -64,7 +64,7 @@ class AIResponseThread(QThread):
                 for sentence, scroll_info in self.ai_chat.process_query_stream(self.query, self.visible_content):
                     # 检查线程是否被请求中断
                     if self.isInterruptionRequested():
-                        print("AI响应生成被中断")
+                        print("AI回應生成被中斷")
                         break
                         
                     # 发射句子信号，传递实际情绪
@@ -73,7 +73,7 @@ class AIResponseThread(QThread):
             except Exception as e:
                 print(f"AI响应生成失败: {str(e)}")
                 # 发射错误信号
-                self.response_ready.emit(f"抱歉，处理您的问题时出现错误: {str(e)}")
+                self.response_ready.emit(f"抱歉，處理您的問題時出現錯誤: {str(e)}")
                 return
                 
             # 发射完整响应信号
@@ -86,12 +86,12 @@ class AIResponseThread(QThread):
                 response = list(self.ai_chat.process_query_stream(self.query, self.visible_content))
                 
                 if self.isInterruptionRequested():
-                    print("AI响应生成被中断")
+                    print("AI回應生成被中斷")
                     return
                     
                 # 发射完整响应信号
                 if response:
                     self.response_ready.emit(" ".join([item[0] for item in response]))  # 拼接所有结果的句子部分并发送
             except Exception as e:
-                print(f"AI响应生成失败: {str(e)}")
-                self.response_ready.emit(f"抱歉，处理您的问题时出现错误: {str(e)}")
+                print(f"AI回應生成失敗: {str(e)}")
+                self.response_ready.emit(f"抱歉，處理您的問題時出現錯誤: {str(e)}")

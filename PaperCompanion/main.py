@@ -56,6 +56,20 @@ def generate_app_icon():
     # 创建图标
     return QIcon(pixmap)
 
+"""
+def save_icon_to_file():
+    pixmap = QPixmap(64, 64)
+    pixmap.fill(Qt.GlobalColor.transparent)
+
+    icon = generate_app_icon()
+    painter = QPainter(pixmap)
+    icon.paint(painter, 0, 0, 64, 64)
+    painter.end()
+
+    pixmap.save("app_icon_output.png")
+    print("圖示已儲存為 app_icon_output.png")
+"""
+
 def main():
     app = QApplication(sys.argv)
     app.setStyle('Fusion')  # 使用Fusion风格以获得更现代的外观
@@ -63,6 +77,8 @@ def main():
     # 生成并设置应用程序图标
     app_icon = generate_app_icon()
     app.setWindowIcon(app_icon)
+    
+    #save_icon_to_file()
     
     # 如果是Windows系统，设置任务栏图标ID
     if sys.platform == "win32":
@@ -89,7 +105,7 @@ def main():
         default_font = QFont(font_family_regular, 10)
         app.setFont(default_font)
     else:
-        print("无法加载自定义字体，使用系统默认字体")
+        print("無法載入自訂字體，使用系統預設字體")
     
     # 设置应用程序级别的调色板，使界面更加现代
     palette = QPalette()
@@ -108,7 +124,8 @@ def main():
     
     app.setPalette(palette)
     
-    window = AIProfessorUI()
+    window = AIProfessorUI(use_custom_titlebar=False)
+    #window = AIProfessorUI(use_custom_titlebar=True)
     window.show()
     sys.exit(app.exec())
 

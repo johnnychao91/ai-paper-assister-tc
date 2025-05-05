@@ -21,7 +21,7 @@ class AIProfessorUI(QMainWindow):
     负责创建和管理整个应用的UI布局、样式和交互逻辑，
     包括侧边栏、文档查看区和AI聊天区
     """
-    def __init__(self):
+    def __init__(self, use_custom_titlebar=True):
         """初始化主窗口及所有子组件"""
         super().__init__()
         
@@ -36,9 +36,12 @@ class AIProfessorUI(QMainWindow):
         self.ai_manager.set_data_manager(self.data_manager)
         self.data_manager.set_ai_manager(self.ai_manager)
         
+        self.use_custom_titlebar = use_custom_titlebar
+        
         # 设置UI元素
         self.init_window_properties()
-        self.init_custom_titlebar()
+        if self.use_custom_titlebar:
+            self.init_custom_titlebar()
         self.init_ui_components()
         
         # 连接数据管理器信号
@@ -53,11 +56,11 @@ class AIProfessorUI(QMainWindow):
     def init_window_properties(self):
         """初始化窗口属性：大小、图标、状态栏和窗口风格"""
         # 设置窗口标题和初始大小
-        self.setWindowTitle("读论文助手")
+        self.setWindowTitle("讀論文助手")
         self.setGeometry(100, 100, 1400, 900)
         
         # 添加状态栏
-        self.statusBar().showMessage("就绪")
+        self.statusBar().showMessage("就緒")
         self.statusBar().setStyleSheet("""
             QStatusBar {
                 background-color: #303F9F;
@@ -67,11 +70,23 @@ class AIProfessorUI(QMainWindow):
             }
         """)
         
+        if self.use_custom_titlebar:
+        # 無邊框但自己做控制按鈕
+            self.setWindowFlags(Qt.WindowType.FramelessWindowHint | 
+                        Qt.WindowType.WindowMaximizeButtonHint | 
+                        Qt.WindowType.WindowMinimizeButtonHint | 
+                        Qt.WindowType.WindowCloseButtonHint)
+        else:
+        # 用系統原生邊框
+            self.setWindowFlags(Qt.WindowType.Window)
+        
+        """
         # 设置无边框窗口，但允许调整大小
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | 
                           Qt.WindowType.WindowMaximizeButtonHint | 
                           Qt.WindowType.WindowMinimizeButtonHint | 
                           Qt.WindowType.WindowCloseButtonHint)
+        """
         
         # 设置窗口样式
         self.setStyleSheet("""
@@ -110,7 +125,7 @@ class AIProfessorUI(QMainWindow):
         app_icon.setPixmap(self.windowIcon().pixmap(16, 16))
         
         # 设置应用标题
-        app_title = QLabel("读论文助手") if self.online_mode else QLabel("读论文助手（离线版）")
+        app_title = QLabel("讀論文助手") if self.online_mode else QLabel("讀論文助理（離線版）")
         app_title.setStyleSheet("color: white; font-weight: bold;")
         
         # 创建窗口控制按钮
@@ -130,7 +145,8 @@ class AIProfessorUI(QMainWindow):
         self.titlebar.mouseDoubleClickEvent = self.titlebar_doubleClickEvent
         
         # 将标题栏添加到主窗口
-        self.layout().setMenuBar(self.titlebar)
+        if self.use_custom_titlebar:
+            self.layout().setMenuBar(self.titlebar)
 
     def create_window_control_buttons(self):
         """创建窗口控制按钮：最小化、最大化和关闭"""
@@ -152,7 +168,7 @@ class AIProfessorUI(QMainWindow):
         """
         
         # 最小化按钮
-        self.btn_minimize = QPushButton("﹣")
+        self.btn_minimize = QPushButton("🗕")
         self.btn_minimize.setStyleSheet(btn_style)
         self.btn_minimize.clicked.connect(self.showMinimized)
         self.btn_minimize.setToolTip("最小化")
@@ -160,7 +176,7 @@ class AIProfessorUI(QMainWindow):
         self.btn_minimize.setCursor(Qt.CursorShape.PointingHandCursor)
         
         # 最大化/还原按钮
-        self.btn_maximize = QPushButton("z")
+        self.btn_maximize = QPushButton("🗖")
         self.btn_maximize.setStyleSheet(btn_style)
         self.btn_maximize.clicked.connect(self.toggle_maximize)
         self.btn_maximize.setShortcut("Ctrl+F")
@@ -186,7 +202,7 @@ class AIProfessorUI(QMainWindow):
             }
         """)
         self.btn_close.clicked.connect(self.close)
-        self.btn_close.setToolTip("关闭")
+        self.btn_close.setToolTip("關閉")
         self.btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
 
     def titlebar_mousePressEvent(self, event):
@@ -211,12 +227,12 @@ class AIProfessorUI(QMainWindow):
         """切换窗口最大化/还原状态"""
         if self.isMaximized():
             self.showNormal()
-            self.btn_maximize.setText("z")
+            self.btn_maximize.setText("🗖")
             self.btn_maximize.setToolTip("最大化")
         else:
             self.showMaximized()
-            self.btn_maximize.setText("r")
-            self.btn_maximize.setToolTip("还原")
+            self.btn_maximize.setText("🗗")
+            self.btn_maximize.setToolTip("還原")
         self.btn_maximize.setShortcut("Ctrl+F")
 
     def init_ui_components(self):
@@ -372,12 +388,12 @@ class AIProfessorUI(QMainWindow):
         
         # 工具栏标题
         title_font = QFont("Source Han Sans SC", 11, QFont.Weight.Bold)
-        doc_title = QLabel("论文阅读")
+        doc_title = QLabel("論文閱讀")
         doc_title.setFont(title_font)
         doc_title.setStyleSheet("color: white; font-weight: bold;")
         
         # 语言切换按钮
-        self.lang_button = QPushButton("切换为英文")
+        self.lang_button = QPushButton("切換為英文")
         self.lang_button.setObjectName("langButton")
         self.lang_button.setStyleSheet("""
             #langButton {
@@ -535,7 +551,7 @@ class AIProfessorUI(QMainWindow):
         self.md_view.set_language("zh")  # 默认显示中文
         
         # 更新语言按钮文本
-        self.lang_button.setText("切换为英文")
+        self.lang_button.setText("切換為英文")
         self.lang_button.setShortcut("Ctrl+L")
         self.lang_button.setStyleSheet("""
             #langButton {
@@ -552,11 +568,12 @@ class AIProfessorUI(QMainWindow):
         """)
         
         # 更新状态栏
-        title = paper.get('translated_title', '') or paper.get('title', '')
-        self.statusBar().showMessage(f"已加载论文: {title}")
+        title = paper.get('id', '')
+        #title = paper.get('translated_title', '') or paper.get('title', '')
+        self.statusBar().showMessage(f"已載入論文: {title}")
         
         # 向AI助手发送论文加载通知
-        self.chat_widget.receive_ai_message(f"已加载论文「{title}」")
+        self.chat_widget.receive_ai_message(f"已載入論文「{title}」")
 
     def on_loading_error(self, error_message):
         """
@@ -566,7 +583,7 @@ class AIProfessorUI(QMainWindow):
             error_message: 错误信息
         """
         # 更新状态栏显示错误
-        self.statusBar().showMessage(f"错误: {error_message}")
+        self.statusBar().showMessage(f"錯誤: {error_message}")
         
         # 也可以在这里添加更明显的错误提示，如弹窗等
 
@@ -598,13 +615,13 @@ class AIProfessorUI(QMainWindow):
                     else:
                         # Linux系统
                         subprocess.Popen(['xdg-open', pdf_path])
-                    self.statusBar().showMessage(f"打开PDF文件: {pdf_path}")
+                    self.statusBar().showMessage(f"開啟PDF文件: {pdf_path}")
                 except Exception as e:
-                    self.statusBar().showMessage(f"打开PDF文件失败: {e}")
+                    self.statusBar().showMessage(f"開啟PDF文件失敗: {e}")
             else:
                 self.statusBar().showMessage("PDF文件不存在")
         else:
-            self.statusBar().showMessage("未加载论文或未指定PDF路径")
+            self.statusBar().showMessage("未載入論文或未指定PDF路徑")
         pass
 
     def toggle_language(self):
@@ -617,7 +634,7 @@ class AIProfessorUI(QMainWindow):
         
         # 设置按钮文本和样式
         if lang == "zh":
-            btn_text = "切换为英文"
+            btn_text = "切換為英文"
             self.lang_button.setStyleSheet("""
                 #langButton {
                     background-color: rgba(255, 255, 255, 0.2);
@@ -632,7 +649,7 @@ class AIProfessorUI(QMainWindow):
                 }
             """)
         else:
-            btn_text = "切换为中文"
+            btn_text = "切換為中文"
             self.lang_button.setStyleSheet("""
                 #langButton {
                     background-color: rgba(65, 105, 225, 0.3);
@@ -654,8 +671,9 @@ class AIProfessorUI(QMainWindow):
         current_paper = self.data_manager.current_paper
         if current_paper:
             language_text = "英文" if lang == "en" else "中文"
-            title = current_paper.get('title' if lang == "en" else 'translated_title', '')
-            self.statusBar().showMessage(f"已切换到{language_text}版本: {title}")
+            title = current_paper.get('id')
+            #title = current_paper.get('title' if lang == "en" else 'translated_title', '')
+            self.statusBar().showMessage(f"已切換到{language_text}版本: {title}")
 
     def on_processing_progress(self, file_name, stage, progress, remaining):
         self.sidebar.update_upload_status(file_name, stage, progress, remaining)
@@ -664,7 +682,7 @@ class AIProfessorUI(QMainWindow):
         self.data_manager.load_papers_index()
         
     def on_processing_error(self, paper_id, error_msg):
-        self.statusBar().showMessage(f"处理论文出错: {error_msg}")
+        self.statusBar().showMessage(f"處理論文出錯: {error_msg}")
         
     def on_queue_updated(self, queue):
         """处理队列更新回调"""
@@ -673,9 +691,9 @@ class AIProfessorUI(QMainWindow):
         
         # 更新状态栏显示
         if pending_count > 0:
-            self.statusBar().showMessage(f"队列中有 {pending_count} 个文件待处理")
+            self.statusBar().showMessage(f"佇列中有 {pending_count} 個檔案待處理")
         else:
-            self.statusBar().showMessage("处理队列为空")
+            self.statusBar().showMessage("處理佇列為空")
         
         # 更新上传组件UI
         if pending_count == 0:
@@ -686,7 +704,7 @@ class AIProfessorUI(QMainWindow):
             next_item = queue[0]
             self.sidebar.update_upload_status(
                 os.path.basename(next_item['path']), 
-                "等待处理", 
+                "等待處理", 
                 0, 
                 pending_count
             )

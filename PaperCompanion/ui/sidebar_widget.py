@@ -49,7 +49,7 @@ class SidebarWidget(QWidget):
         header_layout.setContentsMargins(10, 0, 10, 0)
         
         title_font = QFont("Source Han Sans SC", 11, QFont.Weight.Bold)
-        self.title_label = QLabel("论文列表")
+        self.title_label = QLabel("論文列表")
         self.title_label.setFont(title_font)
         self.title_label.setStyleSheet("color: white; font-weight: bold;")
         
@@ -234,7 +234,8 @@ class SidebarWidget(QWidget):
         self.paper_list.clear()
         for index, paper in enumerate(papers_index, start=1):
             # 优先使用translated_title作为显示文本
-            title = paper.get('translated_title') or paper.get('title') or paper.get('id', '')
+            title = paper.get('id', '')
+            #title = paper.get('translated_title') or paper.get('title') or paper.get('id', '')
             if paper.get('active') == 1:
                 title = f"{index}. {title}"
             item = QListWidgetItem(title)
@@ -248,18 +249,19 @@ class SidebarWidget(QWidget):
 
         # 构造富文本消息
         message = (
-            "<b>请确认是否下载以下论文：</b><br>"
-            + "<br>".join(f"• {paper_id['translated_title']}" for paper_id in self.selected_papers)
+            "<b>請確認是否下載以下論文：</b><br>"
+            + "<br>".join(f"• {paper_id['id']}" for paper_id in self.selected_papers)
+            #+ "<br>".join(f"• {paper_id['translated_title']}" for paper_id in self.selected_papers)
         )
 
         # 创建并配置对话框
         dialog = QMessageBox(self)
-        dialog.setWindowTitle("确认下载")
+        dialog.setWindowTitle("確認下載")
         dialog.setIcon(QMessageBox.Icon.Question)
         dialog.setTextFormat(Qt.TextFormat.RichText)
         dialog.setText(message)
         dialog.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        dialog.button(QMessageBox.StandardButton.Yes).setText("下载")
+        dialog.button(QMessageBox.StandardButton.Yes).setText("下載")
         dialog.button(QMessageBox.StandardButton.No).setText("取消")
 
         # 美化样式
@@ -299,7 +301,7 @@ class SidebarWidget(QWidget):
         if dialog.exec() == QMessageBox.StandardButton.Yes:
             # 在此处执行真正的下载逻辑
             self.selected_papers = []
-            print(f"下载选中的论文：{', '.join(download_papers)}")
+            print(f"下載已選取的論文：{', '.join(download_papers)}")
             self.download_selected.emit(download_papers)
 
     def on_paper_item_clicked(self, item):

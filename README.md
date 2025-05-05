@@ -1,3 +1,16 @@
+# ai-paper-assister-tc分支自訂修改說明
+
+本分支是在 mad-professor、ai-paper-assister、LinYi's Team 及 zangjiucheng 等前人專案的基礎上，進行功能強化與繁體中文在地化調整。
+
+1. ✅ 繁體中文化(包含UI及propmt)
+2. ✅ 將 LLM 模型調整為 `gpt-4o-mini`
+3. ✅ 新增選項視窗為 Windows 系統預設樣式
+4. ✅ 在 UI 中以原始檔案名稱顯示論文標題
+
+***
+
+>（以下為原README內容）
+
 # AI论文助手（AI Paper Assister）
 
 > 该项目是 LinYi's Team 的 mad-professor 的一个分支，主要用于个人论文阅读

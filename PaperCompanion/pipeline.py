@@ -68,7 +68,7 @@ class Pipeline(QObject):
             "translate", "md_restore", "rag"
         }
         self.stages = stages or list(self.available_stages.keys())
-        self.logger.debug("初始化处理阶段: %s", self.stages)
+        self.logger.debug("初始化處理階段: %s", self.stages)
         
         # 初始化处理器
         self.pdf_processor = PDFProcessor()
@@ -137,20 +137,20 @@ class Pipeline(QObject):
         """
         # 阶段名称的友好显示映射
         stage_names = {
-            'pdf2md': 'PDF转Markdown',
-            'md2json': 'Markdown转JSON',
-            'json_process': 'JSON处理',
-            'tiling': '分段处理',
-            'translate': '内容翻译',
-            'md_restore': '生成Markdown文档',
-            'extra_info': '提取额外信息',
-            'rag': 'RAG处理'
+            'pdf2md': 'PDF轉Markdown',
+            'md2json': 'Markdown轉JSON',
+            'json_process': 'JSON處理',
+            'tiling': '分段處理',
+            'translate': '內容翻譯',
+            'md_restore': '產生Markdown文檔',
+            'extra_info': '提取額外資訊',
+            'rag': 'RAG處理'
         }
         
         if self._current_stage is None:
             return {
                 'stage': None,
-                'stage_name': '未开始',
+                'stage_name': '未開始',
                 'index': 0,
                 'total': len(self.stages),
                 'progress': 0,
@@ -208,7 +208,7 @@ class Pipeline(QObject):
             # 运行选定的处理阶段
             for stage in self.stages:
                 if stage not in self.available_stages:
-                    self.logger.warning(f"未知的处理阶段: {stage}")
+                    self.logger.warning(f"未知的處理階段: {stage}")
                     continue
 
                 # If not online_mode then skip api translate feature stage
@@ -218,7 +218,7 @@ class Pipeline(QObject):
                 # 设置当前阶段
                 self._current_stage = stage
                 self.progress_updated.emit(self.get_current_stage())
-                self.logger.info(f"开始运行阶段: {stage}")
+                self.logger.info(f"開始運行階段: {stage}")
    
                 # 获取该阶段的预期输出路径
                 expected_output = self._get_stage_output_path(stage, paper_output_dir, self.paper_info['paper_id'])
@@ -233,22 +233,22 @@ class Pipeline(QObject):
                             break
                             
                     if files_exist:
-                        self.logger.info(f"阶段 {stage} 的输出文件已存在，跳过处理: {expected_output}")
+                        self.logger.info(f"階段 {stage} 的輸出檔案已存在，跳過處理: {expected_output}")
                         output_paths[stage] = expected_output
                         continue
                 else:
                     if isinstance(expected_output, Path) and expected_output.exists():
-                        self.logger.info(f"阶段 {stage} 的输出文件已存在，跳过处理: {expected_output}")
+                        self.logger.info(f"階段 {stage} 的輸出檔案已存在，跳過處理: {expected_output}")
                         output_paths[stage] = expected_output
                         continue
                 
                 # 执行处理阶段
-                self.logger.info(f"开始运行阶段: {stage}")
+                self.logger.info(f"開始運行階段: {stage}")
                 stage_output = self.available_stages[stage](
                     pdf_path, paper_output_dir, self.paper_info['paper_id'], output_paths
                 )
                 output_paths[stage] = stage_output
-                self.logger.info(f"阶段 {stage} 完成")
+                self.logger.info(f"階段 {stage} 完成")
 
             # 处理完成后
             self._current_stage = None
@@ -285,7 +285,7 @@ class Pipeline(QObject):
             return output_paths
             
         except Exception as e:
-            self.logger.error(f"处理过程出错: {str(e)}", exc_info=True)
+            self.logger.error(f"處理過程出錯: {str(e)}", exc_info=True)
             raise
 
     def _update_global_index(self, base_output_dir: Path, final_paths: Dict) -> None:
@@ -305,7 +305,7 @@ class Pipeline(QObject):
                 with open(index_path, 'r', encoding='utf-8') as f:
                     papers_index = json.load(f)
             except json.JSONDecodeError:
-                self.logger.warning(f"索引文件损坏，将创建新索引: {index_path}")
+                self.logger.warning(f"索引檔案損壞，將建立新索引: {index_path}")
                 papers_index = []
         
         # 构建论文条目
@@ -330,9 +330,9 @@ class Pipeline(QObject):
                     tree_data = json.load(f)
                     title = tree_data.get('title', '')
                     translated_title = tree_data.get('translated_title', '')
-                    self.logger.info(f"从RAG树中提取标题: {title}, 翻译标题: {translated_title}")
+                    self.logger.info(f"從RAG樹中提取標題: {title}, 翻譯標題: {translated_title}")
             except Exception as e:
-                self.logger.error(f"从RAG树中提取标题时出错: {str(e)}")
+                self.logger.error(f"從RAG樹中提取標題時出錯: {str(e)}")
         
         paper_entry = {
             'id': self.paper_info['paper_id'],
@@ -359,73 +359,73 @@ class Pipeline(QObject):
         with open(index_path, 'w', encoding='utf-8') as f:
             json.dump(papers_index, f, ensure_ascii=False, indent=2)
         
-        self.logger.info(f"全局索引更新完成: {index_path}")
+        self.logger.info(f"全域索引更新完成: {index_path}")
 
     def _stage_pdf_to_md(self, pdf_path: Path, paper_dir: Path, 
                         paper_name: str, output_paths: dict) -> Path:
         """PDF转Markdown阶段"""
-        self.logger.info(f"开始将PDF转换为Markdown: {pdf_path}")
+        self.logger.info(f"開始將PDF轉換為Markdown: {pdf_path}")
         try:
             markdown_path = self.pdf_processor.process(
                 str(pdf_path),
                 str(paper_dir)
             )
-            self.logger.info(f"PDF成功转换为Markdown: {markdown_path}")
+            self.logger.info(f"PDF成功轉換為Markdown: {markdown_path}")
             return markdown_path
         except Exception as e:
-            self.logger.error(f"PDF转Markdown失败: {str(e)}")
+            self.logger.error(f"PDF轉Markdown失敗: {str(e)}")
             raise
 
     def _stage_md_to_json(self, pdf_path: Path, paper_dir: Path, 
                          paper_name: str, output_paths: dict) -> Path:
         """Markdown转结构化JSON阶段"""
-        self.logger.info("开始将Markdown转换为JSON")
+        self.logger.info("開始將Markdown轉換為JSON")
         try:
             markdown_path = output_paths.get('pdf2md')
             if not markdown_path:
-                raise ValueError("未找到前序阶段生成的Markdown文件")
+                raise ValueError("未找到前序階段產生的Markdown文件")
 
             output_path = self._get_stage_output_path('md2json', paper_dir, paper_name)
             json_path = self.md_processor.process(
                 str(markdown_path),
                 str(output_path)
             )
-            self.logger.info(f"Markdown成功转换为JSON: {json_path}")
+            self.logger.info(f"Markdown成功轉換為JSON: {json_path}")
             return json_path
         except Exception as e:
-            self.logger.error(f"Markdown转JSON失败: {str(e)}")
+            self.logger.error(f"Markdown轉JSON失敗: {str(e)}")
             raise
 
     def _stage_json_process(self, pdf_path: Path, paper_dir: Path, 
                           paper_name: str, output_paths: dict) -> Path:
         """JSON处理阶段"""
-        self.logger.info("开始处理JSON文件")
+        self.logger.info("開始處理JSON文件")
         try:
             input_json_path = output_paths.get('md2json')
             if not input_json_path:
-                raise ValueError("未找到前序阶段生成的JSON文件")
+                raise ValueError("未找到前序階段產生的JSON文件")
             
             output_path = self._get_stage_output_path('json_process', paper_dir, paper_name)
             processed_json_path = self.json_processor.process(
                 str(input_json_path),
                 str(output_path)
             )
-            self.logger.info(f"JSON文件处理完成: {processed_json_path}")
+            self.logger.info(f"JSON檔案處理完成: {processed_json_path}")
             return processed_json_path
         except Exception as e:
-            self.logger.error(f"JSON处理失败: {str(e)}")
+            self.logger.error(f"JSON處理失敗: {str(e)}")
             raise
             
     def _stage_tiling(self, pdf_path: Path, paper_dir: Path, 
                     paper_name: str, output_paths: dict) -> Path:
         """平铺阶段：将处理后的JSON文件进行平铺处理"""
-        self.logger.info("开始平铺阶段")
+        self.logger.info("開始平鋪階段")
         try:
             # 获取前一阶段处理好的JSON文件路径
             input_json_path = output_paths.get('json_process')
                 
             if not input_json_path:
-                raise ValueError("未找到可用于平铺的JSON文件，请确保已运行前序JSON处理阶段")
+                raise ValueError("未找到可用於平舖的JSON文件，請確保已運行前序JSON處理階段")
             
             # 构建输出文件路径
             output_path = self._get_stage_output_path('tiling', paper_dir, paper_name)
@@ -436,22 +436,22 @@ class Pipeline(QObject):
                 str(output_path)
             )
             
-            self.logger.info(f"JSON文件平铺完成: {tiled_json_path}")
+            self.logger.info(f"JSON文件平鋪完成: {tiled_json_path}")
             return tiled_json_path
         except Exception as e:
-            self.logger.error(f"平铺阶段失败: {str(e)}", exc_info=True)
+            self.logger.error(f"平鋪階段失敗: {str(e)}", exc_info=True)
             raise
 
     def _stage_translate(self, pdf_path: Path, paper_dir: Path, 
                         paper_name: str, output_paths: dict) -> Path:
         """翻译阶段，使用TranslateProcessor进行JSON文件的翻译"""
-        self.logger.info("开始翻译阶段")
+        self.logger.info("開始翻譯階段")
         try:
             # 获取前一阶段处理好的JSON文件路径
             input_json_path = output_paths.get('tiling')  
                 
             if not input_json_path:
-                raise ValueError("未找到可用于翻译的JSON文件，请确保已运行前序平铺阶段")
+                raise ValueError("未找到可用於翻譯的JSON文件，請確保已運行前序平鋪階段")
             
             # 构建输出文件路径
             output_path = self._get_stage_output_path('translate', paper_dir, paper_name)
@@ -462,22 +462,22 @@ class Pipeline(QObject):
                 str(output_path)
             )
             
-            self.logger.info(f"JSON文件翻译完成: {translated_json_path}")
+            self.logger.info(f"JSON文件翻譯完成: {translated_json_path}")
             return translated_json_path
         except Exception as e:
-            self.logger.error(f"翻译阶段失败: {str(e)}", exc_info=True)
+            self.logger.error(f"翻譯階段失敗: {str(e)}", exc_info=True)
             raise
 
     def _stage_md_restore(self, pdf_path: Path, paper_dir: Path, 
                   paper_name: str, output_paths: dict) -> dict:
         """还原阶段：将JSON文件还原为中英文Markdown文档"""
-        self.logger.info("开始还原阶段")
+        self.logger.info("開始還原階段")
         try:
             # 获取前一阶段处理好的翻译JSON文件路径
             input_json_path = output_paths.get('translate')
                 
             if not input_json_path:
-                raise ValueError("未找到可用于还原的翻译JSON文件，请确保已运行前序翻译阶段")
+                raise ValueError("未找到可用於還原的翻譯JSON文件，請確保已運行前序翻譯階段")
             
             # 获取该阶段的预期输出路径字典，直接生成最终路径
             output_paths_dict = self._get_stage_output_path('md_restore', paper_dir, paper_name)
@@ -491,7 +491,7 @@ class Pipeline(QObject):
                 str(output_path_zh)
             )
             
-            self.logger.info(f"还原完成: 英文文档 {en_path}, 中文文档 {zh_path}")
+            self.logger.info(f"還原完成: 英文文檔 {en_path}, 中文文檔 {zh_path}")
             
             # 返回一个字典，包含两个输出路径
             return {
@@ -499,19 +499,19 @@ class Pipeline(QObject):
                 'zh': Path(zh_path)
             }
         except Exception as e:
-            self.logger.error(f"还原阶段失败: {str(e)}", exc_info=True)
+            self.logger.error(f"還原階段失敗: {str(e)}", exc_info=True)
             raise
 
     def _stage_extra_info(self, pdf_path: Path, paper_dir: Path, 
                 paper_name: str, output_paths: dict) -> Path:
         """额外信息提取处理阶段，主要生成各章节的总结"""
-        self.logger.info("开始额外信息提取阶段")
+        self.logger.info("開始額外資訊擷取階段")
         try:
             # 获取前一阶段处理好的JSON文件路径，这里使用翻译阶段的输出作为输入
             input_json_path = output_paths.get('translate')
                 
             if not input_json_path:
-                raise ValueError("未找到可用于提取额外信息的JSON文件，请确保已运行前序翻译阶段")
+                raise ValueError("未找到可用於提取額外資訊的JSON文件，請確保已運行前序翻譯階段")
             
             # 构建输出文件路径
             output_path = self._get_stage_output_path('extra_info', paper_dir, paper_name)
@@ -522,10 +522,10 @@ class Pipeline(QObject):
                 str(output_path)
             )
             
-            self.logger.info(f"额外信息提取完成: {processed_json_path}")
+            self.logger.info(f"額外資訊擷取完成: {processed_json_path}")
             return processed_json_path
         except Exception as e:
-            self.logger.error(f"额外信息提取阶段失败: {str(e)}", exc_info=True)
+            self.logger.error(f"額外資訊擷取階段失敗: {str(e)}", exc_info=True)
             raise
 
     def _stage_rag(self, pdf_path: Path, paper_dir: Path, 
@@ -537,7 +537,7 @@ class Pipeline(QObject):
         2. 树结构JSON文件：包含论文的层次结构，与MD文件中的节点key对应
         3. 向量库：基于Markdown文件生成的向量库，用于检索增强生成
         """
-        self.logger.info("开始RAG处理阶段")
+        self.logger.info("開始RAG處理階段")
         try:
             # 获取前一阶段处理好的JSON文件路径
             # 使用extra_info阶段的输出作为输入，因为它包含了额外的摘要信息
@@ -548,7 +548,7 @@ class Pipeline(QObject):
                 input_json_path = output_paths.get('translate')
                 
             if not input_json_path:
-                raise ValueError("未找到可用于RAG处理的JSON文件，请确保已运行前序翻译或额外信息阶段")
+                raise ValueError("未找到可用於RAG處理的JSON文件，請確保已執行前序翻譯或額外資訊階段")
             
             # 构建输出文件路径字典，直接生成最终路径
             output_paths_dict = self._get_stage_output_path('rag', paper_dir, paper_name)
@@ -567,7 +567,7 @@ class Pipeline(QObject):
             )
             
             self.logger.info(
-                f"RAG处理完成: Markdown文件 {md_path}, 树结构JSON {tree_json_path}, 向量库 {vector_store_path}"
+                f"RAG處理完成: Markdown檔 {md_path}, 樹結構JSON {tree_json_path}, 向量庫 {vector_store_path}"
             )
             
             # 返回一个字典，包含三个输出路径
@@ -577,5 +577,5 @@ class Pipeline(QObject):
                 'vector_store': Path(vector_store_path)
             }
         except Exception as e:
-            self.logger.error(f"RAG处理阶段失败: {str(e)}", exc_info=True)
+            self.logger.error(f"RAG處理階段失敗: {str(e)}", exc_info=True)
             raise

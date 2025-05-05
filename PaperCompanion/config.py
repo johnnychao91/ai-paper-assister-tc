@@ -6,8 +6,9 @@ from openai import OpenAI
 from langchain_huggingface import HuggingFaceEmbeddings
 
 # API配置
-API_BASE_URL = "YOUR_API_URL"
-API_KEY = "YOUR_API_KEY"
+API_BASE_URL = "https://api.openai.com/v1"
+API_KEY = "your_api_key"  # 替换为你的API密钥
+
 
 # 嵌入模型配置
 EMBEDDING_MODEL_NAME = "BAAI/bge-m3"
@@ -77,7 +78,8 @@ class LLMClient:
         """
         try:
             response = self.client.chat.completions.create(
-                model="deepseek-chat",
+                model="gpt-4o-mini-2024-07-18",
+                #model="deepseek-chat",
                 messages=messages,
                 temperature=temperature,
                 stream=stream
@@ -96,7 +98,7 @@ class LLMClient:
                 return response.choices[0].message.content
                 
         except Exception as e:
-            print(f"LLM调用出错: {str(e)}")
+            print(f"LLM調用出錯: {str(e)}")
             raise
 
     def chat_stream_by_sentence(self, messages: List[Dict[str, Any]], temperature=0.5) -> Generator[str, None, str]:
@@ -114,7 +116,8 @@ class LLMClient:
         """
         try:
             response = self.client.chat.completions.create(
-                model="deepseek-chat",
+                model="gpt-4o-mini-2024-07-18",
+                #model="deepseek-chat",
                 messages=messages,
                 temperature=temperature,
                 stream=True
@@ -171,8 +174,8 @@ class LLMClient:
             return full_response
                 
         except Exception as e:
-            print(f"LLM调用出错: {str(e)}")
-            yield f"生成回复时出错: {str(e)}"
+            print(f"LLM調用出錯: {str(e)}")
+            yield f"生成回應時出錯: {str(e)}"
             raise
 
 
@@ -198,7 +201,7 @@ class EmbeddingModel:
             except ImportError:
                 device = "cpu"
                 
-            logging.info(f"初始化嵌入模型: {EMBEDDING_MODEL_NAME}，使用设备: {device}")
+            logging.info(f"初始化嵌入模型: {EMBEDDING_MODEL_NAME}，使用設備: {device}")
             
             cls._instance = HuggingFaceEmbeddings(
                 model_name=EMBEDDING_MODEL_NAME,
@@ -214,17 +217,17 @@ if __name__ == "__main__":
     logger = logging.getLogger(__name__)
     
     # LLM客户端示例
-    logger.info("测试LLM客户端...")
+    logger.info("測試LLM客戶端...")
     llm = LLMClient()
     messages = [
         {"role": "user", "content": "你好"}
     ]
     response = llm.chat(messages)
-    logger.info(f"LLM响应: {response}")
+    logger.info(f"LLM回應: {response}")
     
     # 嵌入模型示例
-    logger.info("测试嵌入模型...")
-    text = "这是一个测试文本"
+    logger.info("測試嵌入模型...")
+    text = "這是一個測試文本"
     embedding_model = EmbeddingModel.get_instance()
     embedding = embedding_model.embed_query(text)
-    logger.info(f"嵌入向量维度: {len(embedding)}")
+    logger.info(f"嵌入向量維度: {len(embedding)}")
