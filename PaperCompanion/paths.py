@@ -1,13 +1,13 @@
 import os
 
-# 获取项目根目录
+# 獲取專案根目錄
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 
-# 常用目录
+# 常用目錄
 FONT_DIR = os.path.join(PROJECT_ROOT, "font")
 ASSETS_DIR = os.path.join(PROJECT_ROOT, "assets")
 
-# 辅助函数
+# 輔助函數
 def get_font_path(font_name):
     return os.path.join(FONT_DIR, font_name)
 

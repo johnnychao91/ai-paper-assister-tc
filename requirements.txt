@@ -20,3 +20,4 @@ langdetect
 python-dotenv
 tiktoken
 magic-pdf
+transformers==4.54.0

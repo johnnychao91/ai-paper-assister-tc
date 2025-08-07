@@ -6,53 +6,54 @@ from openai import OpenAI
 from langchain_huggingface import HuggingFaceEmbeddings
 
 # API配置
+#API_BASE_URL = "http://127.0.0.1:1234/v1"
 API_BASE_URL = "https://api.openai.com/v1"
-API_KEY = "your_api_key"  # 替换为你的API密钥
 
+API_KEY = "your_api_key"  # 替換為你的API密鑰
 
 # 嵌入模型配置
 EMBEDDING_MODEL_NAME = "BAAI/bge-m3"
 
-# 数据存储路径
+# 資料儲存路徑
 BASE_DIR = os.path.expanduser("~/.ai-paper-assister-data")
 
-# 在线模式
+# 線上模式
 ONLINE_MODE = True
 
-# 日志配置
+# 日誌配置
 def setup_logging():
-    """设置日志配置为控制台输出"""
-    # 设置日志格式
+    """設定日誌配置為控制台輸出"""
+    # 設定日誌格式
     log_format = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
-    # 创建一个根日志记录器
+    # 建立一個根日誌記錄器
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
     
-    # 创建并配置控制台处理器
+    # 建立並配置控制台處理器
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(log_format)
     
-    # 清除任何现有的处理器
+    # 清除任何現有的處理器
     root_logger.handlers.clear()
-    # 添加控制台处理器
+    # 新增控制台處理器
     root_logger.addHandler(console_handler)
 
-# LLM客户端
+# LLM客戶端
 class LLMClient:
     _instance: Optional['LLMClient'] = None
     
     def __new__(cls, *args, **kwargs):
-        """单例模式实现"""
+        """單例模式實現"""
         if cls._instance is None:
             cls._instance = super(LLMClient, cls).__new__(cls)
             cls._instance._initialized = False
         return cls._instance
     
     def __init__(self, api_key=None, base_url=None):
-        """初始化LLM客户端"""
+        """初始化LLM客戶端"""
         if self._initialized:
             return
             
@@ -66,18 +67,20 @@ class LLMClient:
         self._initialized = True
         
     def chat(self, messages: List[Dict[str, Any]], temperature=0.5, stream=True) -> str:
-        """与LLM交互
+        """與LLM互動
         
         Args:
-            messages: 消息列表
-            temperature: 温度参数，控制随机性
-            stream: 是否使用流式输出
+            messages: 訊息列表
+            temperature: 溫度參數，控制隨機性
+            stream: 是否使用流式輸出
             
         Returns:
-            str: LLM响应内容
+            str: LLM回應內容
         """
         try:
             response = self.client.chat.completions.create(
+                #model="llama-breeze2-8b-instruct-text-i1@q6_k",
+                #model="llama-breeze2-8b-instruct-text-i1@q4_k_m",
                 model="gpt-4o-mini-2024-07-18",
                 #model="deepseek-chat",
                 messages=messages,
@@ -102,20 +105,22 @@ class LLMClient:
             raise
 
     def chat_stream_by_sentence(self, messages: List[Dict[str, Any]], temperature=0.5) -> Generator[str, None, str]:
-        """与LLM交互，按句子流式返回结果
+        """與LLM互動，按句子流式返回結果
         
         Args:
-            messages: 消息列表
-            temperature: 温度参数，控制随机性
+            messages: 訊息列表
+            temperature: 溫度參數，控制隨機性
             
         Yields:
-            str: 每个完整句子
+            str: 每個完整句子
             
         Returns:
-            str: 完整响应
+            str: 完整回應
         """
         try:
             response = self.client.chat.completions.create(
+                #model="llama-breeze2-8b-instruct-text-i1@q6_k",
+                #model="llama-breeze2-8b-instruct-text-i1@q4_k_m",
                 model="gpt-4o-mini-2024-07-18",
                 #model="deepseek-chat",
                 messages=messages,
@@ -126,9 +131,9 @@ class LLMClient:
             full_response = ""
             current_sentence = ""
             
-            # 中文的结束标点 - 这些可以直接作为句子结束符
+            # 中文的結束標點 - 這些可以直接作為句子結束符
             cn_end_marks = '。！？'
-            # 英文的结束标点 - 这些需要检查后续字符
+            # 英文的結束標點 - 這些需要檢查後續字元
             en_end_marks = '.!?;'
             
             for chunk in response:
@@ -137,35 +142,35 @@ class LLMClient:
                     current_sentence += content
                     full_response += content
                     
-                    # 情况1: 包含中文结束标点，直接作为句子结束
+                    # 情況1: 包含中文結束標點，直接作為句子結束
                     if any(char in cn_end_marks for char in content):
                         sentence = current_sentence.strip()
-                        # 只有句子长度超过10字才yield
+                        # 只有句子長度超過10字才yield
                         if sentence and len(sentence) >= 10:
                             yield sentence
                             current_sentence = ""
                     
-                    # 情况2: 检查英文结束标点后是否跟着空格或换行符
+                    # 情況2: 檢查英文結束標點後是否跟著空格或換行符
                     elif any(char in en_end_marks for char in content):
-                        # 检查当前积累的句子中是否有 "英文结束标点+空格/换行" 的模式
+                        # 檢查當前累積的句子中是否有 "英文結束標點+空格/換行" 的模式
                         import re
-                        # 匹配 句点/感叹号/问号/分号 后跟空白字符的模式
+                        # 匹配 句點/感嘆號/問號/分號 後跟空白字元的模式
                         matches = list(re.finditer(r'[.!?;][\s\n]', current_sentence))
                         
                         if matches:
-                            # 找到最后一个匹配，在该位置分割句子
+                            # 找到最後一個匹配，在該位置分割句子
                             last_match = matches[-1]
-                            end_position = last_match.end() - 1  # 减1是为了不包含空格/换行符
+                            end_position = last_match.end() - 1  # 減1是為了不包含空格/換行符
                             
                             sentence = current_sentence[:end_position].strip()
                             remaining = current_sentence[end_position:].strip()
                             
-                            # 只有句子长度超过10字才yield
+                            # 只有句子長度超過10字才yield
                             if sentence and len(sentence) >= 10:
                                 yield sentence
                                 current_sentence = remaining
             
-            # 处理剩余内容
+            # 處理剩餘內容
             if current_sentence.strip():
                 sentence = current_sentence.strip()
                 if sentence:
@@ -185,9 +190,9 @@ class EmbeddingModel:
 
     @classmethod
     def get_instance(cls) -> HuggingFaceEmbeddings:
-        """获取嵌入模型单例"""
+        """獲取嵌入模型單例"""
         if cls._instance is None:
-            # 检查CUDA可用性
+            # 檢查CUDA可用性
             try:
                 import torch
                 if torch.cuda.is_available():
@@ -212,11 +217,11 @@ class EmbeddingModel:
 
 # 使用示例
 if __name__ == "__main__":
-    # 设置日志
+    # 設定日誌
     setup_logging()
     logger = logging.getLogger(__name__)
     
-    # LLM客户端示例
+    # LLM客戶端示例
     logger.info("測試LLM客戶端...")
     llm = LLMClient()
     messages = [

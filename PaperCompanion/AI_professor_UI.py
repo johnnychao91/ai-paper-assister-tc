@@ -16,50 +16,50 @@ from .config import BASE_DIR, ONLINE_MODE
 
 class AIProfessorUI(QMainWindow):
     """
-    主窗口类 - 学术论文AI助手的主界面
+    主視窗類別 - 學術論文AI助手的主介面
     
-    负责创建和管理整个应用的UI布局、样式和交互逻辑，
-    包括侧边栏、文档查看区和AI聊天区
+    負責創建和管理整個應用的UI布局、樣式和交互邏輯，
+    包括側邊欄、文件檢視區和AI聊天區
     """
     def __init__(self, use_custom_titlebar=True):
-        """初始化主窗口及所有子组件"""
+        """初始化主視窗及所有子元件"""
         super().__init__()
         
-        # 初始化数据管理器和AI管理器
+        # 初始化資料管理器和AI管理器
         self.data_manager = DataManager(BASE_DIR)
         self.ai_manager = AIManager()
 
         # 初始化ONLINE模式
         self.online_mode = ONLINE_MODE
         
-        # 设置两者互相引用
+        # 設定兩者互相引用
         self.ai_manager.set_data_manager(self.data_manager)
         self.data_manager.set_ai_manager(self.ai_manager)
         
         self.use_custom_titlebar = use_custom_titlebar
         
-        # 设置UI元素
+        # 設定UI元素
         self.init_window_properties()
         if self.use_custom_titlebar:
             self.init_custom_titlebar()
         self.init_ui_components()
         
-        # 连接数据管理器信号
+        # 連接資料管理器訊號
         self.connect_signals()
         
-        # 加载论文数据
+        # 載入論文資料
         self.data_manager.load_papers_index()
         
-        # 在后台预加载所有论文向量库
+        # 在背景預載入所有論文向量庫
         self.ai_manager.init_rag_retriever(os.path.join(BASE_DIR,"output"))
 
     def init_window_properties(self):
-        """初始化窗口属性：大小、图标、状态栏和窗口风格"""
-        # 设置窗口标题和初始大小
+        """初始化視窗屬性：大小、圖示、狀態列和視窗風格"""
+        # 設定視窗標題和初始大小
         self.setWindowTitle("讀論文助手")
         self.setGeometry(100, 100, 1400, 900)
         
-        # 添加状态栏
+        # 添加狀態列
         self.statusBar().showMessage("就緒")
         self.statusBar().setStyleSheet("""
             QStatusBar {
@@ -81,14 +81,14 @@ class AIProfessorUI(QMainWindow):
             self.setWindowFlags(Qt.WindowType.Window)
         
         """
-        # 设置无边框窗口，但允许调整大小
+        # 設定無邊框視窗，但允許調整大小
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | 
                           Qt.WindowType.WindowMaximizeButtonHint | 
                           Qt.WindowType.WindowMinimizeButtonHint | 
                           Qt.WindowType.WindowCloseButtonHint)
         """
         
-        # 设置窗口样式
+        # 設定視窗樣式
         self.setStyleSheet("""
             QMainWindow {
                 background-color: #E8EAF6;
@@ -97,12 +97,12 @@ class AIProfessorUI(QMainWindow):
 
     def init_custom_titlebar(self):
         """
-        初始化自定义标题栏
+        初始化自訂標題列
         
-        创建一个美观的自定义标题栏，包含应用图标、标题和窗口控制按钮，
-        并实现拖拽移动和双击最大化的功能
+        創建一個美觀的自訂標題列，包含應用圖示、標題和視窗控制按鈕，
+        並實現拖拽移動和雙擊最大化的功能
         """
-        # 创建标题栏框架
+        # 創建標題列框架
         self.titlebar = QFrame(self)
         self.titlebar.setObjectName("customTitleBar")
         self.titlebar.setFixedHeight(30)
@@ -114,24 +114,24 @@ class AIProfessorUI(QMainWindow):
             }
         """)
         
-        # 设置布局
+        # 設定布局
         titlebar_layout = QHBoxLayout(self.titlebar)
         titlebar_layout.setContentsMargins(10, 0, 10, 0)
         titlebar_layout.setSpacing(5)
         
-        # 设置应用图标
+        # 設定應用圖示
         app_icon = QLabel()
-        # 使用应用程序图标渲染到标题栏
+        # 使用應用程式圖示渲染到標題列
         app_icon.setPixmap(self.windowIcon().pixmap(16, 16))
         
-        # 设置应用标题
+        # 設定應用標題
         app_title = QLabel("讀論文助手") if self.online_mode else QLabel("讀論文助理（離線版）")
         app_title.setStyleSheet("color: white; font-weight: bold;")
         
-        # 创建窗口控制按钮
+        # 創建視窗控制按鈕
         self.create_window_control_buttons()
         
-        # 添加组件到布局
+        # 添加元件到布局
         titlebar_layout.addWidget(app_icon)
         titlebar_layout.addWidget(app_title)
         titlebar_layout.addStretch(1)
@@ -139,18 +139,18 @@ class AIProfessorUI(QMainWindow):
         titlebar_layout.addWidget(self.btn_maximize)
         titlebar_layout.addWidget(self.btn_close)
         
-        # 绑定拖动和双击事件
+        # 綁定拖動和雙擊事件
         self.titlebar.mousePressEvent = self.titlebar_mousePressEvent
         self.titlebar.mouseMoveEvent = self.titlebar_mouseMoveEvent
         self.titlebar.mouseDoubleClickEvent = self.titlebar_doubleClickEvent
         
-        # 将标题栏添加到主窗口
+        # 將標題列添加到主視窗
         if self.use_custom_titlebar:
             self.layout().setMenuBar(self.titlebar)
 
     def create_window_control_buttons(self):
-        """创建窗口控制按钮：最小化、最大化和关闭"""
-        # 通用按钮样式
+        """創建視窗控制按鈕：最小化、最大化和關閉"""
+        # 通用按鈕樣式
         btn_style = """
             QPushButton {
                 background-color: transparent;
@@ -167,7 +167,7 @@ class AIProfessorUI(QMainWindow):
             }
         """
         
-        # 最小化按钮
+        # 最小化按鈕
         self.btn_minimize = QPushButton("🗕")
         self.btn_minimize.setStyleSheet(btn_style)
         self.btn_minimize.clicked.connect(self.showMinimized)
@@ -175,7 +175,7 @@ class AIProfessorUI(QMainWindow):
         self.btn_minimize.setShortcut("Ctrl+M")
         self.btn_minimize.setCursor(Qt.CursorShape.PointingHandCursor)
         
-        # 最大化/还原按钮
+        # 最大化/還原按鈕
         self.btn_maximize = QPushButton("🗖")
         self.btn_maximize.setStyleSheet(btn_style)
         self.btn_maximize.clicked.connect(self.toggle_maximize)
@@ -183,7 +183,7 @@ class AIProfessorUI(QMainWindow):
         self.btn_maximize.setToolTip("最大化")
         self.btn_maximize.setCursor(Qt.CursorShape.PointingHandCursor)
         
-        # 关闭按钮
+        # 關閉按鈕
         self.btn_close = QPushButton("✕")
         self.btn_close.setStyleSheet("""
             QPushButton {
@@ -206,13 +206,13 @@ class AIProfessorUI(QMainWindow):
         self.btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
 
     def titlebar_mousePressEvent(self, event):
-        """处理标题栏的鼠标按下事件，用于实现窗口拖动"""
+        """處理標題列的滑鼠按下事件，用於實現視窗拖動"""
         if event.button() == Qt.MouseButton.LeftButton:
             self.dragPos = event.globalPosition().toPoint()
             event.accept()
     
     def titlebar_mouseMoveEvent(self, event):
-        """处理标题栏的鼠标移动事件，实现窗口拖动"""
+        """處理標題列的滑鼠移動事件，實現視窗拖動"""
         if event.buttons() == Qt.MouseButton.LeftButton:
             if hasattr(self, 'dragPos'):
                 self.move(self.pos() + event.globalPosition().toPoint() - self.dragPos)
@@ -220,11 +220,11 @@ class AIProfessorUI(QMainWindow):
                 event.accept()
     
     def titlebar_doubleClickEvent(self, event):
-        """处理标题栏的双击事件，切换窗口最大化状态"""
+        """處理標題列的雙擊事件，切換視窗最大化狀態"""
         self.toggle_maximize()
     
     def toggle_maximize(self):
-        """切换窗口最大化/还原状态"""
+        """切換視窗最大化/還原狀態"""
         if self.isMaximized():
             self.showNormal()
             self.btn_maximize.setText("🗖")
@@ -237,14 +237,14 @@ class AIProfessorUI(QMainWindow):
 
     def init_ui_components(self):
         """
-        初始化UI组件和布局
+        初始化UI元件和布局
         
-        创建应用的主要UI组件，包括:
-        - 侧边栏：用于显示和选择论文
-        - 文档查看区：显示论文内容，支持中英文切换
-        - 聊天区域：用于与AI助手交互
+        創建應用的主要UI元件，包括:
+        - 側邊欄：用於顯示和選擇論文
+        - 文件檢視區：顯示論文內容，支援中英文切換
+        - 聊天區域：用於與AI助手交互
         """
-        # 设置中心部件和主布局
+        # 設定中心部件和主布局
         central_widget = QWidget()
         central_widget.setObjectName("centralWidget")
         self.setCentralWidget(central_widget)
@@ -253,22 +253,22 @@ class AIProfessorUI(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
         
-        # 初始化侧边栏
+        # 初始化側邊欄
         self.sidebar = SidebarWidget()
         
-        # 初始化主内容区域
+        # 初始化主內容區域
         content_container = self.create_content_container()
         
         # 添加到主布局
         main_layout.addWidget(self.sidebar)
         main_layout.addWidget(content_container)
         
-        # 应用全局样式
+        # 應用全域樣式
         self.apply_global_styles()
 
     def create_content_container(self):
-        """创建主内容区域容器，包含文档查看区和聊天区域"""
-        # 主内容区域容器
+        """創建主內容區域容器，包含文件檢視區和聊天區域"""
+        # 主內容區域容器
         content_container = QWidget()
         content_container.setObjectName("contentContainer")
         content_container.setStyleSheet("""
@@ -279,7 +279,7 @@ class AIProfessorUI(QMainWindow):
         content_layout = QVBoxLayout(content_container)
         content_layout.setContentsMargins(10, 10, 10, 10)
         
-        # 内容区域
+        # 內容區域
         content_widget = QWidget()
         content_widget.setObjectName("contentWidget")
         content_widget.setStyleSheet("""
@@ -292,7 +292,7 @@ class AIProfessorUI(QMainWindow):
         content_inner_layout = QHBoxLayout(content_widget)
         content_inner_layout.setContentsMargins(0, 0, 0, 0)
         
-        # 创建分隔器和内容区域组件
+        # 創建分隔器和內容區域元件
         splitter = self.create_content_splitter()
         content_inner_layout.addWidget(splitter)
         content_layout.addWidget(content_widget)
@@ -300,26 +300,26 @@ class AIProfessorUI(QMainWindow):
         return content_container
 
     def create_content_splitter(self):
-        """创建内容区域分隔器，用于调整文档和聊天区域的比例"""
-        # 分隔器，用于调整文档和聊天的宽度比例
+        """創建內容區域分隔器，用於調整文件和聊天區域的比例"""
+        # 分隔器，用於調整文件和聊天的寬度比例
         splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.setHandleWidth(1)  # 设置分隔条宽度
+        splitter.setHandleWidth(1)  # 設定分隔條寬度
         splitter.setStyleSheet("""
             QSplitter::handle {
                 background-color: #C5CAE9;
             }
         """)
         
-        # 创建Markdown显示区域
+        # 創建Markdown顯示區域
         md_container = self.create_markdown_container()
         
-        # 创建聊天区域
+        # 創建聊天區域
         self.chat_widget = ChatWidget()
         self.chat_widget.set_paper_controller(self.data_manager)
         self.chat_widget.set_ai_controller(self.ai_manager)
         self.chat_widget.set_markdown_view(self.md_view) 
         
-        # 添加到分隔器并设置初始比例
+        # 添加到分隔器並設定初始比例
         splitter.addWidget(md_container)
         splitter.addWidget(self.chat_widget)
         splitter.setSizes([int(self.width() * 0.6), int(self.width() * 0.4)])
@@ -327,18 +327,18 @@ class AIProfessorUI(QMainWindow):
         return splitter
 
     def create_markdown_container(self):
-        """创建Markdown文档显示区域"""
-        # Markdown显示区域容器
+        """創建Markdown文件顯示區域"""
+        # Markdown顯示區域容器
         md_container = QWidget()
         md_container.setObjectName("mdContainer")
         md_layout = QVBoxLayout(md_container)
         md_layout.setContentsMargins(0, 0, 0, 0)
         md_layout.setSpacing(0)
         
-        # 创建文档工具栏
+        # 創建文件工具列
         toolbar = self.create_doc_toolbar()
         
-        # 创建Markdown视图容器
+        # 創建Markdown檢視容器
         md_view_container = QFrame()
         md_view_container.setObjectName("mdViewContainer")
         md_view_container.setStyleSheet("""
@@ -354,9 +354,9 @@ class AIProfessorUI(QMainWindow):
         md_view_layout = QVBoxLayout(md_view_container)
         md_view_layout.setContentsMargins(5, 5, 5, 10)
 
-        # 创建Markdown视图并传入数据管理器
+        # 創建Markdown檢視並傳入資料管理器
         self.md_view = MarkdownView()
-        self.md_view.set_data_manager(self.data_manager)  # 设置数据管理器
+        self.md_view.set_data_manager(self.data_manager)  # 設定資料管理器
         self.md_view.setStyleSheet("background-color: #FFFFFF;")
         md_view_layout.addWidget(self.md_view)
         
@@ -367,8 +367,8 @@ class AIProfessorUI(QMainWindow):
         return md_container
 
     def create_doc_toolbar(self):
-        """创建文档工具栏，包含标题和语言切换按钮"""
-        # 工具栏容器
+        """創建文件工具列，包含標題和語言切換按鈕"""
+        # 工具列容器
         toolbar = QFrame()
         toolbar.setObjectName("docToolbar")
         toolbar.setFixedHeight(40)
@@ -382,17 +382,17 @@ class AIProfessorUI(QMainWindow):
             }
         """)
         
-        # 工具栏布局
+        # 工具列布局
         toolbar_layout = QHBoxLayout(toolbar)
         toolbar_layout.setContentsMargins(15, 0, 15, 0)
         
-        # 工具栏标题
+        # 工具列標題
         title_font = QFont("Source Han Sans SC", 11, QFont.Weight.Bold)
         doc_title = QLabel("論文閱讀")
         doc_title.setFont(title_font)
         doc_title.setStyleSheet("color: white; font-weight: bold;")
         
-        # 语言切换按钮
+        # 語言切換按鈕
         self.lang_button = QPushButton("切換為英文")
         self.lang_button.setObjectName("langButton")
         self.lang_button.setStyleSheet("""
@@ -443,7 +443,7 @@ class AIProfessorUI(QMainWindow):
         return toolbar
 
     def apply_global_styles(self):
-        """应用全局样式，主要用于统一滚动条风格"""
+        """應用全域樣式，主要用於統一滾動條風格"""
         self.setStyleSheet("""
             QMainWindow {
                 background-color: #E8EAF6;
@@ -471,86 +471,86 @@ class AIProfessorUI(QMainWindow):
         """)
 
     def connect_signals(self):
-        """连接数据管理器和UI组件的信号和槽"""
-        # 连接侧边栏上传信号
+        """連接資料管理器和UI元件的訊號和槽"""
+        # 連接側邊欄上傳訊號
         self.sidebar.upload_file.connect(self.data_manager.upload_file)
         self.sidebar.upload_zip.connect(self.data_manager.load_achieved_papers)
         self.sidebar.pause_processing.connect(self.data_manager.pause_processing)
         self.sidebar.resume_processing.connect(self.data_manager.resume_processing)
 
-        # 连接数据管理器的论文数据信号
+        # 連接資料管理器的論文資料訊號
         self.sidebar.resume_processing.connect(self.data_manager.resume_processing)
 
-        # 连接数据管理器的论文数据信号
-        self.data_manager.papers_loaded.connect(self.on_papers_loaded)  # 这是关键连接
+        # 連接資料管理器的論文資料訊號
+        self.data_manager.papers_loaded.connect(self.on_papers_loaded)  # 這是關鍵連接
         self.data_manager.paper_content_loaded.connect(self.on_paper_content_loaded)
         self.data_manager.loading_error.connect(self.on_loading_error)
         self.data_manager.message.connect(self.on_message)
         
-        # 连接侧边栏的论文选择信号
+        # 連接側邊欄的論文選擇訊號
         self.sidebar.paper_selected.connect(self.on_paper_selected)
 
-        # 连接侧边栏的PDF下载信号
+        # 連接側邊欄的PDF下載訊號
         self.sidebar.download_selected.connect(self.data_manager.download_papers)
 
         # Toggle Active
         self.sidebar.toggle_active.connect(self.data_manager.toggle_active)
 
-        # 连接处理进度信号
+        # 連接處理進度訊號
         self.data_manager.processing_progress.connect(self.on_processing_progress)
         self.data_manager.processing_finished.connect(self.on_processing_finished)
         self.data_manager.processing_error.connect(self.on_processing_error)
         self.data_manager.queue_updated.connect(self.on_queue_updated)
 
-        # 初始化处理系统
+        # 初始化處理系統
         self.data_manager.initialize_processing_system()
 
     def on_papers_loaded(self, papers):
         """
-        处理论文列表加载完成的信号
+        處理論文列表載入完成的訊號
         
         Args:
-            papers: 论文数据列表
+            papers: 論文資料列表
         """
         self.sidebar.load_papers(papers)
         
     def on_paper_selected(self, paper_id):
         """
-        处理论文选择事件
+        處理論文選擇事件
         
-        当用户在侧边栏选择一篇论文时，通知数据管理器加载相应内容
+        當用戶在側邊欄選擇一篇論文時，通知資料管理器載入相應內容
         
         Args:
-            paper_id: 选择的论文ID
+            paper_id: 選擇的論文ID
         """
-        # 通知数据管理器加载选定的论文
+        # 通知資料管理器載入選定的論文
         self.data_manager.load_paper_content(paper_id)
 
     def toggle_active(self, paper_id):
         """
-        切换论文的激活状态
+        切換論文的啟用狀態
         
         Args:
-            paper_id: 论文ID
+            paper_id: 論文ID
         """
-        # 通知数据管理器切换选定的论文激活状态
+        # 通知資料管理器切換選定的論文啟用狀態
         self.data_manager.toggle_active(paper_id)
 
     def on_paper_content_loaded(self, paper, zh_content, en_content):
         """
-        处理论文内容加载完成的信号
+        處理論文內容載入完成的訊號
         
         Args:
-            paper: 论文数据字典
-            zh_content: 中文内容
-            en_content: 英文内容
+            paper: 論文資料字典
+            zh_content: 中文內容
+            en_content: 英文內容
         """
-        # 加载文档内容到Markdown视图
+        # 載入文件內容到Markdown檢視
         self.md_view.load_markdown(zh_content, "zh", render=False)  # 不立即渲染
         self.md_view.load_markdown(en_content, "en", render=False)  # 不立即渲染
-        self.md_view.set_language("zh")  # 默认显示中文
+        self.md_view.set_language("zh")  # 預設顯示中文
         
-        # 更新语言按钮文本
+        # 更新語言按鈕文字
         self.lang_button.setText("切換為英文")
         self.lang_button.setShortcut("Ctrl+L")
         self.lang_button.setStyleSheet("""
@@ -567,39 +567,39 @@ class AIProfessorUI(QMainWindow):
             }
         """)
         
-        # 更新状态栏
+        # 更新狀態列
         title = paper.get('id', '')
         #title = paper.get('translated_title', '') or paper.get('title', '')
         self.statusBar().showMessage(f"已載入論文: {title}")
         
-        # 向AI助手发送论文加载通知
+        # 向AI助手傳送論文載入通知
         self.chat_widget.receive_ai_message(f"已載入論文「{title}」")
 
     def on_loading_error(self, error_message):
         """
-        处理加载错误的信号
+        處理載入錯誤的訊號
         
         Args:
-            error_message: 错误信息
+            error_message: 錯誤訊息
         """
-        # 更新状态栏显示错误
+        # 更新狀態列顯示錯誤
         self.statusBar().showMessage(f"錯誤: {error_message}")
         
-        # 也可以在这里添加更明显的错误提示，如弹窗等
+        # 也可以在這裡添加更明顯的錯誤提示，如彈窗等
 
     def on_message(self, message):
         """
-        处理一般消息的信号
+        處理一般訊息的訊號
         
         Args:
-            message: 消息内容
+            message: 訊息內容
         """
-        # 更新状态栏
+        # 更新狀態列
         self.statusBar().showMessage(message)
 
     def toggle_pdf(self):
         """
-        切换PDF查看器
+        切換PDF檢視器
         """
         current_paper = self.data_manager.current_paper
         if current_paper and current_paper.get('id'):
@@ -607,32 +607,32 @@ class AIProfessorUI(QMainWindow):
             if os.path.exists(pdf_path):
                 try:
                     if os.name == 'nt':
-                        # Windows系统
+                        # Windows系統
                         subprocess.Popen(['start', pdf_path], shell=True)
                     elif sys.platform == 'darwin':
-                        # macOS系统
+                        # macOS系統
                         subprocess.Popen(['open', pdf_path])
                     else:
-                        # Linux系统
+                        # Linux系統
                         subprocess.Popen(['xdg-open', pdf_path])
-                    self.statusBar().showMessage(f"開啟PDF文件: {pdf_path}")
+                    self.statusBar().showMessage(f"開啟PDF檔案: {pdf_path}")
                 except Exception as e:
-                    self.statusBar().showMessage(f"開啟PDF文件失敗: {e}")
+                    self.statusBar().showMessage(f"開啟PDF檔案失敗: {e}")
             else:
-                self.statusBar().showMessage("PDF文件不存在")
+                self.statusBar().showMessage("PDF檔案不存在")
         else:
             self.statusBar().showMessage("未載入論文或未指定PDF路徑")
         pass
 
     def toggle_language(self):
         """
-        切换文档语言
+        切換文件語言
         
-        在中文和英文之间切换文档显示语言，并更新按钮状态和样式
+        在中文和英文之間切換文件顯示語言，並更新按鈕狀態和樣式
         """
         lang = self.md_view.toggle_language()
         
-        # 设置按钮文本和样式
+        # 設定按鈕文字和樣式
         if lang == "zh":
             btn_text = "切換為英文"
             self.lang_button.setStyleSheet("""
@@ -667,7 +667,7 @@ class AIProfessorUI(QMainWindow):
         self.lang_button.setText(btn_text)
         self.lang_button.setShortcut("Ctrl+L")
         
-        # 更新状态栏
+        # 更新狀態列
         current_paper = self.data_manager.current_paper
         if current_paper:
             language_text = "英文" if lang == "en" else "中文"
@@ -685,22 +685,22 @@ class AIProfessorUI(QMainWindow):
         self.statusBar().showMessage(f"處理論文出錯: {error_msg}")
         
     def on_queue_updated(self, queue):
-        """处理队列更新回调"""
-        # 获取待处理文件数量
+        """處理佇列更新回調"""
+        # 獲取待處理檔案數量
         pending_count = len(queue)
         
-        # 更新状态栏显示
+        # 更新狀態列顯示
         if pending_count > 0:
             self.statusBar().showMessage(f"佇列中有 {pending_count} 個檔案待處理")
         else:
             self.statusBar().showMessage("處理佇列為空")
         
-        # 更新上传组件UI
+        # 更新上傳元件UI
         if pending_count == 0:
-            # 队列空时更新UI为完成状态
+            # 佇列空時更新UI為完成狀態
             self.sidebar.update_upload_status("", "全部完成", 100, 0)
         elif not self.data_manager.is_processing and pending_count > 0:
-            # 有待处理文件但当前没在处理时，显示下一个要处理的文件
+            # 有待處理檔案但目前沒在處理時，顯示下一個要處理的檔案
             next_item = queue[0]
             self.sidebar.update_upload_status(
                 os.path.basename(next_item['path']), 
@@ -710,23 +710,23 @@ class AIProfessorUI(QMainWindow):
             )
 
     def closeEvent(self, event):
-        """处理窗口关闭事件 - 确保所有线程停止"""
-        # 调用聊天部件的closeEvent
-        # 清理AI管理器资源
+        """處理視窗關閉事件 - 確保所有執行緒停止"""
+        # 調用聊天部件的closeEvent
+        # 清理AI管理器資源
         if hasattr(self, 'ai_manager'):
             self.ai_manager.cleanup()
         if hasattr(self, 'chat_widget'):
-            # 如果chat_widget中有语音线程，请求中断并清理
+            # 如果chat_widget中有語音執行緒，請求中斷並清理
             if hasattr(self.chat_widget, 'voice_thread') and self.chat_widget.voice_thread:
                 self.chat_widget.voice_thread.stop()  # 使用新增的stop()方法
-                self.chat_widget.voice_thread.wait(1000)  # 等待线程完成，最多1秒
+                self.chat_widget.voice_thread.wait(1000)  # 等待執行緒完成，最多1秒
             
             self.chat_widget.closeEvent(event)
         
-        # 停止任何正在运行的处理线程
+        # 停止任何正在執行的處理執行緒
         if self.data_manager.current_thread is not None and self.data_manager.current_thread.isRunning():
             self.data_manager.current_thread.stop()
-            self.data_manager.current_thread.wait(1000)  # 等待线程完成，最多1秒
+            self.data_manager.current_thread.wait(1000)  # 等待執行緒完成，最多1秒
         
-        # 调用父类的closeEvent
+        # 調用父類別的closeEvent
         super().closeEvent(event)

@@ -10,93 +10,93 @@ from .threads import ProcessingThread
 
 class DataManager(QObject):
     """
-    后端数据管理类
+    後端資料管理類別
     
-    负责所有数据的加载、处理和管理，作为前端UI和数据之间的桥梁
+    負責所有資料的載入、處理和管理，作為前端UI和資料之間的橋樑
     """
-    # 定义信号
-    papers_loaded = pyqtSignal(list)                         # 论文列表加载完成信号
-    paper_content_loaded = pyqtSignal(dict, str, str)        # 论文内容加载完成信号(paper_data, zh_content, en_content)
-    loading_error = pyqtSignal(str)                          # 加载错误信号
-    message = pyqtSignal(str)                                # 一般消息信号
-    processing_started = pyqtSignal(str)                     # 开始处理论文信号
-    processing_progress = pyqtSignal(str, str, float, int)   # (文件名, 阶段, 进度, 剩余数量)
-    processing_finished = pyqtSignal(str)                    # 处理完成的论文ID
-    processing_error = pyqtSignal(str, str)                  # (论文ID, 错误信息)
-    queue_updated = pyqtSignal(list)                         # 队列更新信号
+    # 定義訊號
+    papers_loaded = pyqtSignal(list)                         # 論文列表載入完成訊號
+    paper_content_loaded = pyqtSignal(dict, str, str)        # 論文內容載入完成訊號(paper_data, zh_content, en_content)
+    loading_error = pyqtSignal(str)                          # 載入錯誤訊號
+    message = pyqtSignal(str)                                # 一般訊息訊號
+    processing_started = pyqtSignal(str)                     # 開始處理論文訊號
+    processing_progress = pyqtSignal(str, str, float, int)   # (檔案名, 階段, 進度, 剩餘數量)
+    processing_finished = pyqtSignal(str)                    # 處理完成的論文ID
+    processing_error = pyqtSignal(str, str)                  # (論文ID, 錯誤訊息)
+    queue_updated = pyqtSignal(list)                         # 佇列更新訊號
     
     def __init__(self, base_dir=None):
-        """初始化数据管理器"""
+        """初始化資料管理器"""
         super().__init__()
         
-        # 初始化目录结构
+        # 初始化目錄結構
         self._init_directories(base_dir)
         
-        # 初始化数据状态
+        # 初始化資料狀態
         self.papers_index = []
         self.current_paper = None
 
         self.current_dir = os.getcwd() if os.access(os.getcwd(), os.W_OK) else self.base_dir
         self.download_dir = os.path.join(self.current_dir, "downloads")
         
-        # 初始化处理队列和状态
+        # 初始化處理佇列和狀態
         self._init_processing_queue()
         
-        # 初始化处理管线
+        # 初始化處理管線
         self._init_pipeline()
     
-    # ========== 初始化相关方法 ==========
+    # ========== 初始化相關方法 ==========
     
     def _init_directories(self, base_dir):
-        """初始化基础目录结构"""
+        """初始化基礎目錄結構"""
         self.base_dir = base_dir or os.path.dirname(os.path.abspath(__file__))
         self.output_dir = os.path.join(self.base_dir, "output")
         self.data_dir = os.path.join(self.base_dir, "data")
         
-        # 确保目录存在
+        # 確保目錄存在
         os.makedirs(self.output_dir, exist_ok=True)
         os.makedirs(self.data_dir, exist_ok=True)
     
     def _init_processing_queue(self):
-        """初始化处理队列和状态"""
-        self.processing_queue = []    # 待处理文件队列
-        self.is_processing = False    # 是否正在处理
-        self.is_paused = True         # 初始状态为暂停
-        self.current_thread = None    # 当前处理线程
+        """初始化處理佇列和狀態"""
+        self.processing_queue = []    # 待處理檔案佇列
+        self.is_processing = False    # 是否正在處理
+        self.is_paused = True         # 初始狀態為暫停
+        self.current_thread = None    # 目前處理執行緒
     
     def _init_pipeline(self):
-        """初始化处理管线"""
+        """初始化處理管線"""
         self.pipeline = Pipeline()
         self.pipeline.progress_updated.connect(self.on_pipeline_progress)
 
-    # ========== 论文存档与加载 ==========
+    # ========== 論文存檔與載入 ==========
 
     def _generate_papers_index(self, paper_ids):
-        """生成论文索引"""
+        """產生論文索引"""
         for paper_id in paper_ids:
             paper_info = next((paper for paper in self.papers_index if paper["id"] == paper_id), None)
             if paper_info:
-                paper_info["active"] = False  # 激活状态
+                paper_info["active"] = False  # 啟用狀態
                 self.papers_index.remove(paper_info) if paper_info else None
                 self.new_papers_index.append(paper_info)
 
         if len(self.new_papers_index) != len(paper_ids):
             self.message.emit(f"警告: 產生索引時發現 {len(paper_ids) - len(self.new_papers_index)} 篇論文索引缺失")
         
-        # 保存下载索引到文件
+        # 儲存下載索引到檔案
         index_path = os.path.join(self.download_dir, "output", "papers_index.json")
         with open(index_path, 'w', encoding='utf-8') as f:
             json.dump(self.new_papers_index, f, ensure_ascii=False, indent=4)
         self.message.emit(f"論文索引已儲存到: {index_path}")
 
-        # 更新本地索引文件
+        # 更新本地索引檔案
         self._update_papers_index()
 
     def _download_paper(self, paper_id):
         output_path = os.path.join(self.output_dir, paper_id)
         pdf_path = os.path.join(self.data_dir, f"{paper_id}.pdf")
         if os.path.exists(output_path):
-            # 移动文件到下载目录
+            # 移動檔案到下載目錄
             shutil.move(output_path, os.path.join(self.download_dir, "output", paper_id))
         if os.path.exists(pdf_path):
             shutil.move(pdf_path, os.path.join(self.download_dir, "data", paper_id + ".pdf"))
@@ -126,16 +126,16 @@ class DataManager(QObject):
     def _open_folder(self, folder_path):
         import subprocess
         import sys
-        """打开指定目录"""
+        """開啟指定目錄"""
         try:
             if os.name == 'nt':
-                # Windows系统
+                # Windows系統
                 subprocess.Popen(['start', folder_path], shell=True)
             elif sys.platform == 'darwin':
-                # macOS系统
+                # macOS系統
                 subprocess.Popen(['open', folder_path])
             else:
-                # Linux系统
+                # Linux系統
                 subprocess.Popen(['xdg-open', folder_path])
             self.message.emit(f"開啟目錄: {folder_path}")
         except Exception as e:
@@ -146,7 +146,7 @@ class DataManager(QObject):
 
         # 初始化
         if os.path.exists(self.download_dir):
-            # 清空下载目录
+            # 清空下載目錄
             shutil.rmtree(self.download_dir)
         os.makedirs(self.download_dir)
         os.makedirs(os.path.join(self.download_dir, "data"))
@@ -154,54 +154,54 @@ class DataManager(QObject):
 
         self.new_papers_index = []
 
-        # 生成论文索引
+        # 產生論文索引
         self._generate_papers_index(paper_ids)
 
-        # 下载论文
+        # 下載論文
         for paper_id in paper_ids:
             self._download_paper(paper_id)
             
-        # 生成压缩文件
+        # 產生壓縮檔案
         zip_path = self._create_archive(paper_ids)
 
         if not os.path.exists(f"{zip_path}.zip"):
-            self.message.emit(f"壓縮檔案生成失敗: {zip_path}.zip")
+            self.message.emit(f"壓縮檔案產生失敗: {zip_path}.zip")
 
-        self.message.emit(f"壓縮檔案已生成: {zip_path}.zip")
+        self.message.emit(f"壓縮檔案已產生: {zip_path}.zip")
     
         # Remove temporary download directory
         shutil.rmtree(self.download_dir, ignore_errors=True)
 
-        # 打开下载目录
+        # 開啟下載目錄
         self._open_folder(self.current_dir)
 
     def _move_paper_file(self, paper_id, source_path, target_dir):
-        """移动论文文件到指定目录"""
+        """移動論文檔案到指定目錄"""
         if not os.path.exists(source_path):
-            self.loading_error.emit(f"來源文件不存在: {source_path}")
+            self.loading_error.emit(f"來源檔案不存在: {source_path}")
             return False
         
-        # 构建源和目标路径
+        # 構建源和目標路徑
         pdf_source_path = os.path.join(source_path, "data", f"{paper_id}.pdf")
         pdf_target_path = os.path.join(target_dir, "data", f"{paper_id}.pdf")
         output_source_path = os.path.join(source_path,"output", paper_id)
         output_target_path = os.path.join(target_dir, "output", paper_id)
 
-        # 检查pdf和output文件是否存在
+        # 檢查pdf和output檔案是否存在
         if not os.path.exists(pdf_source_path):
-            self.loading_error.emit(f"PDF文件不存在: {pdf_source_path}")
+            self.loading_error.emit(f"PDF檔案不存在: {pdf_source_path}")
             return False
         if not os.path.exists(output_source_path):
             self.loading_error.emit(f"output目錄不存在: {output_source_path}")
             return False
 
-        # 移动文件
+        # 移動檔案
         try:
             shutil.move(pdf_source_path, pdf_target_path)
             shutil.move(output_source_path, output_target_path)
             return True
         except Exception as e:
-            self.loading_error.emit(f"移動文件失敗: {str(e)}")
+            self.loading_error.emit(f"移動檔案失敗: {str(e)}")
             return False
 
     def _move_paper_files(self, load_path):
@@ -230,20 +230,20 @@ class DataManager(QObject):
             # Move files to data directory
             _load = self._move_paper_file(paper["id"], load_path, self.base_dir)
             if not _load:
-                self.loading_error.emit(f"移動文件失敗: {paper['id']}")
+                self.loading_error.emit(f"移動檔案失敗: {paper['id']}")
                 continue
             self.papers_index.append(paper)
 
-        # 写入索引文件
+        # 寫入索引檔案
         self._update_papers_index()
 
 
     def load_achieved_papers(self, zip_path):
-        self.message.emit(f"正在載入壓縮文件: {zip_path}")
+        self.message.emit(f"正在載入壓縮檔案: {zip_path}")
         file_name = os.path.basename(zip_path)
         zip_code = file_name.split("_")[-1].split(".")[0]
 
-        # 解压缩文件到临时目录
+        # 解壓縮檔案到臨時目錄
         temp_dir = os.path.join(self.base_dir, "temp")
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
@@ -259,34 +259,34 @@ class DataManager(QObject):
         hash_file_path = os.path.join(temp_dir, "hash")
 
         if not os.path.exists(hash_file_path):
-            self.loading_error.emit(f"哈希檔案不存在: {hash_file_path}")
+            self.loading_error.emit(f"雜湊檔案不存在: {hash_file_path}")
             return
 
         with open(hash_file_path, 'r', encoding='utf-8') as hash_file:
             hash_suffix = hash_file.read().strip()
             if hash_suffix != zip_code:
-                self.loading_error.emit(f"哈希值不匹配: {hash_suffix} != {zip_code}")
+                self.loading_error.emit(f"雜湊值不符合: {hash_suffix} != {zip_code}")
                 return
 
         previous_paper_count = len(self.papers_index)
 
-        # 移动文件到数据目录
+        # 移動檔案到資料目錄
         self._move_paper_files(temp_dir)
 
-        # 清理临时目录
+        # 清理臨時目錄
         shutil.rmtree(temp_dir, ignore_errors=True)
 
         self.message.emit(f"暫存目錄已清理: {temp_dir}")
 
-        # 重新加载论文索引
+        # 重新載入論文索引
         self.load_papers_index()
         
         self.message.emit(f"載入完成，發現 {len(self.papers_index) - previous_paper_count} 篇新論文")
     
-    # ========== 论文索引加载管理 ==========
+    # ========== 論文索引載入管理 ==========
     
     def load_papers_index(self):
-        """加载论文索引数据"""
+        """載入論文索引資料"""
         try:
             index_path = os.path.join(self.output_dir, "papers_index.json")
             if os.path.exists(index_path):
@@ -296,45 +296,45 @@ class DataManager(QObject):
                 self.message.emit(f"成功從 {index_path} 載入論文索引")
                 self.papers_loaded.emit(self.papers_index)
             else:
-                self.message.emit(f"索引文件不存在: {index_path}")
+                self.message.emit(f"索引檔案不存在: {index_path}")
         except Exception as e:
             self.loading_error.emit(f"載入論文索引失敗: {str(e)}")
 
     def toggle_active(self, paper_id):
-        """切换论文的激活状态"""
+        """切換論文的啟用狀態"""
         for idx, paper in enumerate(self.papers_index):
             if paper["id"] == paper_id:
                 self.papers_index[idx]["active"] = not paper.get("active", True)
                 self.message.emit(f"論文 {paper_id} 的啟動狀態已切換")
                 break
 
-        # 更新索引文件
+        # 更新索引檔案
         self._update_papers_index()
 
     def _update_papers_index(self):
-        """更新论文索引"""
+        """更新論文索引"""
         index_path = os.path.join(self.output_dir, "papers_index.json")
         with open(index_path, 'w', encoding='utf-8') as f:
             json.dump(self.papers_index, f, ensure_ascii=False, indent=4)
-        self.message.emit(f"索引文件已更新: {index_path}")
+        self.message.emit(f"索引檔案已更新: {index_path}")
 
-        # 重新加载索引以更新UI
+        # 重新載入索引以更新UI
         self.load_papers_index()
         self.papers_loaded.emit(self.papers_index)
     
-    # ========== 论文内容加载 ==========
+    # ========== 論文內容載入 ==========
     
     def load_paper_content(self, paper_id):
         """
-        加载指定论文的内容
+        載入指定論文的內容
         
         Args:
-            paper_id: 论文ID
+            paper_id: 論文ID
         
         Returns:
             tuple: (paper, zh_content, en_content)
         """
-        # 查找指定ID的论文
+        # 查找指定ID的論文
         paper = next((p for p in self.papers_index if p["id"] == paper_id), None)
         
         if not paper:
@@ -342,16 +342,16 @@ class DataManager(QObject):
             return None, "", ""
         
         self.current_paper = paper
-        self.message.emit(f"嘗試加載論文: {paper.get('translated_title', '')} ({paper_id})")
+        self.message.emit(f"嘗試載入論文: {paper.get('translated_title', '')} ({paper_id})")
         
-        # 获取路径信息
+        # 獲取路徑資訊
         paths = paper.get('paths', {})
         en_path = paths.get('article_en', '')
         zh_path = paths.get('article_zh', '')
         en_full_path = os.path.join(self.output_dir, en_path)
         zh_full_path = os.path.join(self.output_dir, zh_path)
         
-        # 加载中文和英文内容
+        # 載入中文和英文內容
         zh_content = self._load_document_content(
             zh_full_path, 
             f"# {paper.get('translated_title', '')}", 
@@ -364,24 +364,24 @@ class DataManager(QObject):
             is_chinese=False
         )
         
-        # 验证图片路径
+        # 驗證圖片路徑
         self._verify_images_path(paper)
         
-        # 发送加载完成信号
+        # 傳送載入完成訊號
         self.paper_content_loaded.emit(paper, zh_content, en_content)
         return paper, zh_content, en_content
     
     def _load_document_content(self, file_path, default_title, is_chinese=True):
         """
-        加载文档内容
+        載入文件內容
         
         Args:
-            file_path: 文档路径
-            default_title: 默认标题
-            is_chinese: 是否中文文档
+            file_path: 文件路徑
+            default_title: 預設標題
+            is_chinese: 是否中文文件
         
         Returns:
-            str: 文档内容
+            str: 文件內容
         """
         lang_desc = "中文" if is_chinese else "英文"
         
@@ -390,52 +390,52 @@ class DataManager(QObject):
                 with open(file_path, 'r', encoding='utf-8') as f:
                     return f.read()
             except Exception as e:
-                self.loading_error.emit(f"載入{lang_desc}文件失敗: {str(e)}")
-                return f"{default_title}\n\n載入{lang_desc}文件時發生錯誤: {str(e)}"
+                self.loading_error.emit(f"載入{lang_desc}檔案失敗: {str(e)}")
+                return f"{default_title}\n\n載入{lang_desc}檔案時發生錯誤: {str(e)}"
         else:
-            self.message.emit(f"{lang_desc}文檔不存在: {file_path}")
-            return f"{default_title}\n\n{lang_desc}文檔不存在或無法存取。 \n路徑: {file_path}"
+            self.message.emit(f"{lang_desc}文件不存在: {file_path}")
+            return f"{default_title}\n\n{lang_desc}文件不存在或無法存取。 \n路徑: {file_path}"
     
     def _verify_images_path(self, paper):
-        """验证论文图片路径是否存在"""
+        """驗證論文圖片路徑是否存在"""
         images_path = paper.get('paths', {}).get('images', '')
         if images_path:
             full_images_path = os.path.join(self.output_dir, images_path)
             if not os.path.exists(full_images_path):
                 self.message.emit(f"警告: 圖片目錄不存在: {full_images_path}")
     
-    # ========== RAG树相关 ==========
+    # ========== RAG樹相關 ==========
     
     def load_rag_tree(self, paper_id):
         """
-        加载指定论文的RAG树结构
+        載入指定論文的RAG樹結構
         
         Args:
-            paper_id: 论文ID
+            paper_id: 論文ID
             
         Returns:
-            dict: RAG树结构，如果加载失败则返回None
+            dict: RAG樹結構，如果載入失敗則返回None
         """
-        # 查找指定ID的论文
+        # 查找指定ID的論文
         paper = next((p for p in self.papers_index if p["id"] == paper_id), None)
         
         if not paper:
             self.loading_error.emit(f"未找到ID為{paper_id}的論文")
             return None
         
-        # 获取RAG树路径
+        # 獲取RAG樹路徑
         rag_tree_path = paper.get('paths', {}).get('rag_tree', '')
         
         if not rag_tree_path:
             self.message.emit(f"論文 {paper_id} 沒有RAG樹路徑")
             return None
         
-        # 构建基于当前应用目录的绝对路径
+        # 構建基於目前應用目錄的絕對路徑
         rag_tree_full_path = os.path.join(self.output_dir, rag_tree_path)
         
-        self.message.emit(f"嘗試加載RAG樹: {rag_tree_full_path}")
+        self.message.emit(f"嘗試載入RAG樹: {rag_tree_full_path}")
         
-        # 加载RAG树
+        # 載入RAG樹
         if os.path.exists(rag_tree_full_path):
             try:
                 with open(rag_tree_full_path, 'r', encoding='utf-8') as f:
@@ -449,55 +449,55 @@ class DataManager(QObject):
 
     def find_matching_content(self, text_fragment, lang="zh", element_type="text"):
         """
-        在当前论文的RAG树中查找最匹配的内容
+        在目前論文的RAG樹中查找最符合的內容
         
         Args:
-            text_fragment: 要匹配的文本片段
-            lang: 语言代码，'zh'表示中文，'en'表示英文
-            element_type: 元素类型，'title', 'text' 或 'table'
-                'text': 匹配标题或文本描述
-                'table': 匹配表格内容
-                'title': 匹配章节标题
+            text_fragment: 要符合的文字片段
+            lang: 語言代碼，'zh'表示中文，'en'表示英文
+            element_type: 元素類型，'title', 'text' 或 'table'
+                'text': 符合標題或文字描述
+                'table': 符合表格內容
+                'title': 符合章節標題
             
         Returns:
-            tuple: (对应的另一种语言的内容, 匹配到的元素类型)
+            tuple: (對應的另一種語言的內容, 符合到的元素類型)
         """
         if not self.current_paper:
             self.message.emit("沒有載入論文，無法尋找符合內容")
             return None, None
         
-        # 加载RAG树
+        # 載入RAG樹
         rag_tree = self.load_rag_tree(self.current_paper['id'])
         if not rag_tree:
             self.message.emit("無法載入RAG樹，無法尋找符合內容")
             return None, None
         
-        # 特殊处理：摘要匹配
+        # 特殊處理：摘要符合
         if element_type == 'title' and ("abstract" in text_fragment.lower() or "摘要" in text_fragment):
             return "abstract" if lang == "zh" else "摘要", "title"
             
-        # 根据元素类型选择搜索策略
+        # 根據元素類型選擇搜尋策略
         if element_type == 'title':
             return self._search_title_match(rag_tree, text_fragment, lang)
         else:
             return self._search_content_match(rag_tree, text_fragment, lang, element_type)
     
     def _search_title_match(self, rag_tree, text_fragment, lang):
-        """在RAG树中搜索标题匹配"""
+        """在RAG樹中搜尋標題符合"""
         source_field, target_field = self._get_field_names("document_title", lang)
         
-        # 检查文档标题
+        # 檢查文件標題
         if source_field in rag_tree and target_field in rag_tree:
             if rag_tree[source_field] == text_fragment:
                 return rag_tree[target_field], 'title'
         
-        # 递归搜索章节标题
+        # 遞迴搜尋章節標題
         def search_title_in_sections(sections):
             for section in sections:
                 if source_field in section and section[source_field] == text_fragment:
                     return section[target_field], 'title'
                     
-                # 递归搜索子章节
+                # 遞迴搜尋子章節
                 if "children" in section and section["children"]:
                     result, type_found = search_title_in_sections(section["children"])
                     if result:
@@ -550,7 +550,7 @@ class DataManager(QObject):
                             if self._is_text_match(content, text_fragment):
                                 return node.get(target_field), "text"
                 
-                # 递归搜索子章节
+                # 遞迴搜尋子章節
                 if "children" in section and section["children"]:
                     result, type_found = search_in_sections(section["children"])
                     if result:
@@ -558,23 +558,23 @@ class DataManager(QObject):
             
             return None, None
         
-        # 开始搜索
+        # 開始搜尋
         if "sections" in rag_tree:
             return search_in_sections(rag_tree["sections"])
         
         return None, None
     
     def _match_table_node(self, node, text_fragment, lang, element_type):
-        """匹配表格节点"""
+        """符合表格節點"""
         if element_type == "text":
-            # 当寻找文本时，匹配表格的标题/说明
+            # 當尋找文字時，符合表格的標題/說明
             source_field, target_field = self._get_field_names("table", lang)
             if source_field in node:
                 caption = node[source_field]
                 if self._is_text_match(caption, text_fragment):
                     return node.get(target_field), "text"
         elif element_type == "table":
-            # 当寻找表格时，匹配表格内容
+            # 當尋找表格時，符合表格內容
             content_field = "content"
             if content_field in node:
                 table_content = node[content_field]
@@ -584,7 +584,7 @@ class DataManager(QObject):
         return None, None
     
     def _get_field_names(self, node_type, lang):
-        """获取字段名称"""
+        """獲取欄位名稱"""
         if node_type == "text":
             return ("translated_content" if lang == "zh" else "content", 
                     "content" if lang == "zh" else "translated_content")
@@ -648,44 +648,44 @@ class DataManager(QObject):
         # 加载现有索引
         self.load_papers_index()
         
-        # 初始化处理管线（如果尚未初始化）
+        # 初始化處理管線（如果尚未初始化）
         if self.pipeline is None:
             self._init_pipeline()
         
-        # 扫描数据目录中的PDF文件
+        # 掃描資料目錄中的PDF檔案
         self.scan_for_unprocessed_files()
     
     def scan_for_unprocessed_files(self):
-        """扫描数据目录，查找未处理或处理不完整的PDF文件"""
-        # 清空现有队列
+        """掃描資料目錄，查找未處理或處理不完整的PDF檔案"""
+        # 清空現有佇列
         self.processing_queue = []
         
-        # 获取已处理论文的ID列表
+        # 獲取已處理論文的ID列表
         processed_ids = {paper['id'] for paper in self.papers_index}
         
-        # 扫描数据目录中的PDF文件
+        # 掃描資料目錄中的PDF檔案
         pdf_files = [f for f in os.listdir(self.data_dir) if f.lower().endswith('.pdf')]
         
-        # 对于每个PDF文件，检查是否已经处理
+        # 對於每個PDF檔案，檢查是否已經處理
         for pdf_file in pdf_files:
-            paper_id = os.path.splitext(pdf_file)[0]  # 不包含扩展名的文件名作为ID
+            paper_id = os.path.splitext(pdf_file)[0]  # 不包含副檔名的檔案名作為ID
             
-            # 检查是否已经在索引中并且处理完整
+            # 檢查是否已經在索引中並且處理完整
             if paper_id not in processed_ids:
-                # 新文件，添加到队列
+                # 新檔案，添加到佇列
                 self.processing_queue.append({
                     'id': paper_id,
                     'path': os.path.join(self.data_dir, pdf_file),
                     'status': 'pending',
-                    'missing_steps': ['all'],  # 全部步骤都缺失
+                    'missing_steps': ['all'],  # 全部步驟都缺失
                 })
             else:
-                # 检查是否所有必要文件都存在
+                # 檢查是否所有必要檔案都存在
                 paper_info = next((p for p in self.papers_index if p['id'] == paper_id), None)
                 missing_paths = self._check_missing_paths(paper_info)
                 
                 if missing_paths:
-                    # 处理不完整，添加到队列
+                    # 處理不完整，添加到佇列
                     self.processing_queue.append({
                         'id': paper_id,
                         'path': os.path.join(self.data_dir, pdf_file),
@@ -693,10 +693,10 @@ class DataManager(QObject):
                         'missing_steps': missing_paths,
                     })
         
-        # 按缺失步骤数排序（缺失少的在前）
+        # 按缺失步驟數排序（缺失少的在前）
         self.processing_queue.sort(key=lambda x: len(x.get('missing_steps', [])))
         
-        # 发射队列更新信号
+        # 發射佇列更新訊號
         self.queue_updated.emit(self.processing_queue)
         
         self.message.emit(f"掃描完成，發現 {len(self.processing_queue)} 個待處理文件")
@@ -748,54 +748,54 @@ class DataManager(QObject):
             
             return True
         except Exception as e:
-            self.loading_error.emit(f"上傳文件失敗: {str(e)}")
+            self.loading_error.emit(f"上傳檔案失敗: {str(e)}")
             return False
     
     def _copy_file_to_data_dir(self, file_path, target_path):
-        """复制文件到数据目录"""
-        # 规范化路径进行比较，检查是否是同一文件
+        """複製檔案到資料目錄"""
+        # 標準化路徑進行比較，檢查是否是同一檔案
         try:
             is_same_file = os.path.samefile(file_path, target_path)
         except:
-            # 如果samefile失败（例如文件不存在），则使用normpath进行比较
+            # 如果samefile失敗（例如檔案不存在），則使用normpath進行比較
             is_same_file = os.path.normpath(file_path) == os.path.normpath(target_path)
         
-        # 如果不是同一文件，才进行复制
+        # 如果不是同一檔案，才進行複製
         if not is_same_file:
             try:
                 shutil.copy2(file_path, target_path)
-                self.message.emit(f"文件已複製到資料目錄: {target_path}")
+                self.message.emit(f"檔案已複製到資料目錄: {target_path}")
             except Exception as e:
-                self.loading_error.emit(f"複製文件時發生錯誤: {str(e)}")
-                # 继续执行，假设文件已存在或其他原因可以忽略
+                self.loading_error.emit(f"複製檔案時發生錯誤: {str(e)}")
+                # 繼續執行，假設檔案已存在或其他原因可以忽略
         else:
-            self.message.emit(f"文件已在資料目錄中: {target_path}")
+            self.message.emit(f"檔案已在資料目錄中: {target_path}")
     
     def _update_processing_queue(self, paper_id, file_path):
-        """更新处理队列"""
-        # 检查是否已在队列中
+        """更新處理佇列"""
+        # 檢查是否已在佇列中
         existing_item = next((item for item in self.processing_queue if item['id'] == paper_id), None)
         
         if existing_item:
-            # 已在队列中，更新状态并移至队首
+            # 已在佇列中，更新狀態並移至隊首
             existing_item['status'] = 'pending'
             existing_item['path'] = file_path
-            existing_item['priority'] = 1  # 确保高优先级
+            existing_item['priority'] = 1  # 確保高優先級
             
-            # 将项目移到队列开头
+            # 將項目移到佇列開頭
             self.processing_queue.remove(existing_item)
             self.processing_queue.insert(0, existing_item)
         else:
-            # 添加到队列开头（而不是末尾）
+            # 添加到佇列開頭（而不是末尾）
             self.processing_queue.insert(0, {
                 'id': paper_id,
                 'path': file_path,
                 'status': 'pending',
                 'missing_steps': ['all'],
-                'priority': 1  # 添加一个高优先级标记
+                'priority': 1  # 添加一個高優先級標記
             })
         
-        # 更新队列
+        # 更新佇列
         self.queue_updated.emit(self.processing_queue)
     
     def process_next_in_queue(self):
@@ -848,53 +848,53 @@ class DataManager(QObject):
         """处理完成回调"""
         self.message.emit(f"論文處理完成: {paper_id}")
         
-        # 标记处理完成
+        # 標記處理完成
         self.is_processing = False
         
-        # 从队列中移除已处理项
+        # 從佇列中移除已處理項
         if self.processing_queue:
             self.processing_queue.pop(0)
         
-        # 发送处理完成信号
+        # 傳送處理完成訊號
         self.processing_finished.emit(paper_id)
         
-        # 添加向量库到RAG检索器
+        # 添加向量庫到RAG檢索器
         self._add_paper_vector_store(paper_id)
         
-        # 更新队列状态
+        # 更新佇列狀態
         self.queue_updated.emit(self.processing_queue)
         
-        # 重新加载论文索引
+        # 重新載入論文索引
         self.load_papers_index()
         
-        # 继续处理下一个（如果未暂停）
+        # 繼續處理下一個（如果未暫停）
         if not self.is_paused:
             self.process_next_in_queue()
 
     def _add_paper_vector_store(self, paper_id):
-        """将处理完成的论文向量库添加到RAG检索器"""
+        """將處理完成的論文向量庫添加到RAG檢索器"""
         try:
-            # 获取论文数据
+            # 獲取論文資料
             paper = next((p for p in self.papers_index if p["id"] == paper_id), None)
             if not paper:
                 self.message.emit(f"[WARNING] 找不到ID為{paper_id}的論文，無法新增向量庫")
                 return False
                 
-            # 获取向量库路径
+            # 獲取向量庫路徑
             vector_store_path = paper.get('paths', {}).get('rag_vector_store')
             if not vector_store_path:
                 self.message.emit(f"[WARNING] 論文{paper_id}沒有向量庫路徑")
                 return False
                 
-            # 构建完整路径
+            # 構建完整路徑
             full_path = os.path.join(self.output_dir, vector_store_path)
             
-            # 验证路径是否存在
+            # 驗證路徑是否存在
             if not os.path.exists(full_path):
                 self.message.emit(f"[WARNING] 論文{paper_id}的向量庫路徑不存在: {full_path}")
                 return False
             
-            # 通过AI管理器添加向量库
+            # 透過AI管理器添加向量庫
             if hasattr(self, 'ai_manager') and self.ai_manager:
                 success = self.ai_manager.add_paper_vector_store(paper_id, full_path)
                 if success:
@@ -919,52 +919,52 @@ class DataManager(QObject):
             
         self.loading_error.emit(f"處理論文 {paper_id} 時發生錯誤: {error_msg}")
         
-        # 标记处理结束
+        # 標記處理結束
         self.is_processing = False
         
-        # 从队列中移除错误项
+        # 從佇列中移除錯誤項
         if self.processing_queue and len(self.processing_queue) > 0:
             self.processing_queue[0]['status'] = 'error'
             self.processing_queue[0]['error_msg'] = error_msg
             self.processing_queue.pop(0)
         
-        # 更新队列状态
+        # 更新佇列狀態
         self.queue_updated.emit(self.processing_queue)
         
-        # 继续处理下一个（如果未暂停）
+        # 繼續處理下一個（如果未暫停）
         if not self.is_paused:
             self.process_next_in_queue()
     
-    # ========== 队列控制 ==========
+    # ========== 佇列控制 ==========
     
     def pause_processing(self):
-        """暂停处理队列"""
+        """暫停處理佇列"""
         self.is_paused = True
-        self.message.emit("處理隊列已暫停")
+        self.message.emit("處理佇列已暫停")
         
-        # 立即停止当前正在运行的线程
+        # 立即停止目前正在執行的執行緒
         if self.current_thread and self.current_thread.isRunning():
-            self.current_thread.stop()  # 立即终止线程
-            self.is_processing = False  # 重置处理状态
+            self.current_thread.stop()  # 立即終止執行緒
+            self.is_processing = False  # 重置處理狀態
             
-            # 如果队列不为空，将当前任务重置为待处理状态
+            # 如果佇列不為空，將目前任務重置為待處理狀態
             if self.processing_queue and len(self.processing_queue) > 0:
                 current_item = self.processing_queue[0]
                 current_item['status'] = 'pending'
                 self.message.emit(f"已停止處理論文: {current_item['id']}")
             
-            # 更新队列状态
+            # 更新佇列狀態
             self.queue_updated.emit(self.processing_queue)
     
     def resume_processing(self):
-        """继续处理队列"""
+        """繼續處理佇列"""
         self.is_paused = False
-        self.message.emit("處理隊列已繼續")
+        self.message.emit("處理佇列已繼續")
         
-        # 如果没有正在进行的处理，尝试处理下一个
+        # 如果沒有正在進行的處理，嘗試處理下一個
         if not self.is_processing:
             self.process_next_in_queue()
     
     def set_ai_manager(self, ai_manager):
-        """设置AI管理器引用"""
+        """設定AI管理器引用"""
         self.ai_manager = ai_manager

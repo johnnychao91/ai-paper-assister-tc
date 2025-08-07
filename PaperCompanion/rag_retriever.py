@@ -6,42 +6,42 @@ from .config import EmbeddingModel
 from PyQt6.QtCore import QObject, pyqtSignal, QThread
 
 class VectorLoadingThread(QThread):
-    """用于在后台加载向量库的线程"""
-    loading_finished = pyqtSignal(dict)  # 加载完成信号，携带paper_id到路径的映射
+    """用於在背景載入向量庫的執行緒"""
+    loading_finished = pyqtSignal(dict)  # 載入完成信號，攜帶paper_id到路徑的映射
     
     def __init__(self, base_path):
         super().__init__()
         self.base_path = base_path
     
     def run(self):
-        """执行向量库索引加载"""
+        """執行向量庫索引載入"""
         paper_vector_paths = {}
         
         try:
-            # 构建索引文件路径
+            # 建構索引檔案路徑
             index_path = Path(self.base_path) / "papers_index.json"
             if not index_path.exists():
                 print(f"[WARNING] 論文索引不存在: {index_path}")
                 self.loading_finished.emit({})
                 return
                 
-            # 加载索引
+            # 載入索引
             with open(index_path, 'r', encoding='utf-8') as f:
                 papers_index = json.load(f)
                 
-            # 遍历所有论文，记录其向量库路径
+            # 遍歷所有論文，記錄其向量庫路徑
             for paper in papers_index:
                 paper_id = paper.get('id')
                 vector_store_path = paper.get('paths', {}).get('rag_vector_store')
                 
                 if paper_id and vector_store_path:
-                    # 存储论文ID和向量库路径的映射
+                    # 儲存論文ID和向量庫路徑的映射
                     full_path = str(Path(self.base_path) / vector_store_path)
                     paper_vector_paths[paper_id] = full_path
                     
             print(f"[INFO] 預先載入了 {len(paper_vector_paths)} 篇論文的向量庫路徑")
             
-            # 发出加载完成信号
+            # 發出載入完成信號
             self.loading_finished.emit(paper_vector_paths)
             
         except Exception as e:
@@ -50,66 +50,66 @@ class VectorLoadingThread(QThread):
 
 
 class RagRetriever(QObject):
-    """RAG检索器，用于从向量库中检索相关内容"""
+    """RAG檢索器，用於從向量庫中檢索相關內容"""
     
-    loading_complete = pyqtSignal(bool)  # 加载完成信号
+    loading_complete = pyqtSignal(bool)  # 載入完成信號
     
     def __init__(self, base_path=None):
         """
-        初始化RAG检索器并预加载所有论文的向量库路径
+        初始化RAG檢索器並預載入所有論文的向量庫路徑
         
         Args:
-            base_path: 基础路径，如果提供则自动预加载所有论文
+            base_path: 基礎路徑，如果提供則自動預載入所有論文
         """
         super().__init__()
-        self.vector_stores = {}  # 缓存加载过的向量库: {paper_id: vector_store}
-        self.paper_vector_paths = {}  # 论文ID到向量库路径的映射: {paper_id: vector_path}
+        self.vector_stores = {}  # 快取載入過的向量庫: {paper_id: vector_store}
+        self.paper_vector_paths = {}  # 論文ID到向量庫路徑的映射: {paper_id: vector_path}
         self.base_path = base_path
         self.loading_thread = None
-        self.rag_trees = {}  # 缓存加载过的rag_tree: {paper_id: rag_tree}
+        self.rag_trees = {}  # 快取載入過的rag_tree: {paper_id: rag_tree}
         
-        # 如果提供了base_path，则预加载所有论文的索引
+        # 如果提供了base_path，則預載入所有論文的索引
         if base_path:
             self.preload_all_papers(base_path)
 
     def preload_all_papers(self, base_path):
         """
-        在后台线程中预加载所有论文的索引和向量库路径
+        在背景執行緒中預載入所有論文的索引和向量庫路徑
         
         Args:
-            base_path: 基础路径
+            base_path: 基礎路徑
         """
         self.base_path = base_path
         print(f"[INFO] 開始在背景載入論文向量庫索引: {base_path}")
         
-        # 创建并启动加载线程
+        # 建立並啟動載入執行緒
         self.loading_thread = VectorLoadingThread(base_path)
         self.loading_thread.loading_finished.connect(self._on_loading_finished)
         self.loading_thread.start()
 
     def _on_loading_finished(self, paper_vector_paths):
-        """处理向量库路径加载完成的回调"""
+        """處理向量庫路徑載入完成的回調"""
         self.paper_vector_paths = paper_vector_paths
-        print(f"[INFO] 完成論文向量庫索引加載，共加載 {len(paper_vector_paths)} 個論文索引")
+        print(f"[INFO] 完成論文向量庫索引載入，共載入 {len(paper_vector_paths)} 個論文索引")
         self.loading_complete.emit(len(paper_vector_paths) > 0)
 
     def add_paper(self, paper_id: str, vector_store_path: str) -> bool:
         """
-        添加新论文的向量库路径并尝试加载
+        新增新論文的向量庫路徑並嘗試載入
         
         Args:
-            paper_id: 论文ID
-            vector_store_path: 向量库路径
+            paper_id: 論文ID
+            vector_store_path: 向量庫路徑
             
         Returns:
-            bool: 添加成功返回True，否则返回False
+            bool: 新增成功返回True，否則返回False
         """
         try:
-            # 添加论文ID和向量库路径的映射
+            # 新增論文ID和向量庫路徑的映射
             self.paper_vector_paths[paper_id] = vector_store_path
             print(f"[INFO] 新增論文向量庫: {paper_id} -> {vector_store_path}")
             
-            # 尝试加载向量库
+            # 嘗試載入向量庫
             vector_store = self.load_vector_store(vector_store_path)
             if vector_store:
                 self.vector_stores[paper_id] = vector_store
@@ -124,27 +124,27 @@ class RagRetriever(QObject):
 
     def load_vector_store(self, vector_store_path: str) -> Optional[FAISS]:
         """
-        加载向量库
+        載入向量庫
         
         Args:
-            vector_store_path: 向量库路径
+            vector_store_path: 向量庫路徑
             
         Returns:
-            Optional[FAISS]: 向量库对象，加载失败则返回None
+            Optional[FAISS]: 向量庫物件，載入失敗則返回None
         """
-        # 检查路径是否存在
+        # 檢查路徑是否存在
         path = Path(vector_store_path)
         if not path.exists():
             print(f"[ERROR] 向量庫路徑不存在: {vector_store_path}")
             return None
             
-        # 检查索引文件是否存在
+        # 檢查索引檔案是否存在
         if not (path / "index.faiss").exists():
             print(f"[ERROR] 向量庫索引檔不存在: {vector_store_path}/index.faiss")
             return None
             
         try:
-            # 加载向量库
+            # 載入向量庫
             vector_store = FAISS.load_local(
                 vector_store_path,
                 EmbeddingModel.get_instance(),
@@ -159,34 +159,34 @@ class RagRetriever(QObject):
             
     def load_rag_tree(self, paper_id: str) -> Dict:
         """
-        加载论文的rag_tree
+        載入論文的rag_tree
         
         Args:
-            paper_id: 论文ID
+            paper_id: 論文ID
             
         Returns:
-            Dict: 论文的rag_tree结构
+            Dict: 論文的rag_tree結構
         """
         if paper_id in self.rag_trees:
             return self.rag_trees[paper_id]
             
         try:
-            # 构建rag_tree路径
+            # 建構rag_tree路徑
             if not self.base_path:
                 print("[ERROR] 未設定基礎路徑，無法載入rag_tree")
                 return {}
                 
-            # 从索引文件查找rag_tree路径
+            # 從索引檔案查找rag_tree路徑
             index_path = Path(self.base_path) / "papers_index.json"
             if not index_path.exists():
                 print(f"[ERROR] 論文索引不存在: {index_path}")
                 return {}
                 
-            # 加载索引
+            # 載入索引
             with open(index_path, 'r', encoding='utf-8') as f:
                 papers_index = json.load(f)
             
-            # 查找论文
+            # 查找論文
             rag_tree_path = None
             for paper in papers_index:
                 if paper.get('id') == paper_id:
@@ -197,16 +197,16 @@ class RagRetriever(QObject):
                 print(f"[ERROR] 未找到論文 {paper_id} 的rag_tree路徑")
                 return {}
                 
-            # 加载rag_tree
+            # 載入rag_tree
             full_path = Path(self.base_path) / rag_tree_path
             if not full_path.exists():
-                print(f"[ERROR] rag_tree文件不存在: {full_path}")
+                print(f"[ERROR] rag_tree檔案不存在: {full_path}")
                 return {}
                 
             with open(full_path, 'r', encoding='utf-8') as f:
                 rag_tree = json.load(f)
                 
-            # 缓存rag_tree
+            # 快取rag_tree
             self.rag_trees[paper_id] = rag_tree
             print(f"[INFO] 成功載入論文 {paper_id} 的rag_tree")
             return rag_tree
@@ -217,24 +217,24 @@ class RagRetriever(QObject):
 
     def retrieve(self, query: str, paper_id: str, top_k: int = 5) -> List[Tuple[str, float]]:
         """
-        从指定论文的向量库中检索相关内容
+        從指定論文的向量庫中檢索相關內容
         
         Args:
-            query: 查询文本
-            paper_id: 论文ID
-            top_k: 返回结果数量
+            query: 查詢文字
+            paper_id: 論文ID
+            top_k: 返回結果數量
             
         Returns:
-            List[Tuple[str, float]]: 检索结果列表，每个元素为(文本内容, 分数)
+            List[Tuple[str, float]]: 檢索結果列表，每個元素為(文字內容, 分數)
         """
-        # 获取该论文的向量库
+        # 獲取該論文的向量庫
         vector_store = None
         
-        # 检查是否已加载
+        # 檢查是否已載入
         if paper_id in self.vector_stores:
             vector_store = self.vector_stores[paper_id]
         else:
-            # 尝试加载
+            # 嘗試載入
             if paper_id in self.paper_vector_paths:
                 vector_store_path = self.paper_vector_paths[paper_id]
                 vector_store = self.load_vector_store(vector_store_path)
@@ -246,13 +246,13 @@ class RagRetriever(QObject):
             return []
             
         try:
-            # 执行检索
+            # 執行檢索
             docs_with_scores = vector_store.similarity_search_with_score(
                 query=query,
                 k=top_k
             )
             
-            # 格式化结果
+            # 格式化結果
             results = [(doc.page_content, score) for doc, score in docs_with_scores]
             
             print(f"[INFO] 從論文 {paper_id} 檢索到 {len(results)} 筆結果")
@@ -262,34 +262,34 @@ class RagRetriever(QObject):
             return []
 
     def is_ready(self):
-        """检查向量库是否已加载完成"""
+        """檢查向量庫是否已載入完成"""
         return bool(self.paper_vector_paths)
 
     def retrieve_with_context(self, query: str, paper_id: str, top_k: int = 5) -> Tuple[str, Dict]:
         """
-        从指定论文的向量库中检索相关内容并保留其在原文中的结构
+        從指定論文的向量庫中檢索相關內容並保留其在原文中的結構
         
         Args:
-            query: 查询文本
-            paper_id: 论文ID
-            top_k: 返回结果数量
+            query: 查詢文字
+            paper_id: 論文ID
+            top_k: 返回結果數量
             
         Returns:
-            Tuple[str, Dict]: (结构化的检索结果, 最佳滚动定位信息)
+            Tuple[str, Dict]: (結構化的檢索結果, 最佳滾動定位資訊)
         """
-        # 首先检查是否已完成加载
+        # 首先檢查是否已完成載入
         if not self.is_ready():
             print("[WARNING] 向量庫索引尚未載入完成，無法執行檢索")
             return "", None
 
-        # 获取该论文的向量库
+        # 獲取該論文的向量庫
         vector_store = None
         
-        # 检查是否已加载
+        # 檢查是否已載入
         if paper_id in self.vector_stores:
             vector_store = self.vector_stores[paper_id]
         else:
-            # 尝试加载
+            # 嘗試載入
             if paper_id in self.paper_vector_paths:
                 vector_store_path = self.paper_vector_paths[paper_id]
                 vector_store = self.load_vector_store(vector_store_path)
@@ -301,15 +301,15 @@ class RagRetriever(QObject):
             return "", None
             
         try:
-            # 加载rag_tree
+            # 載入rag_tree
             rag_tree = self.load_rag_tree(paper_id)
             if not rag_tree:
                 print(f"[WARNING] 未能載入論文 {paper_id} 的rag_tree")
                 return "", None
                 
-            # 移除重试机制，直接执行检索
+            # 移除重試機制，直接執行檢索
             try:
-                # 执行检索
+                # 執行檢索
                 docs_with_scores = vector_store.similarity_search_with_score(
                     query=query,
                     k=top_k
@@ -318,16 +318,16 @@ class RagRetriever(QObject):
                 print(f"[ERROR] 檢索失敗: {str(e)}")
                 return "", None
 
-            # 过滤分数大于0.6的结果 - 保持原有检索逻辑
+            # 過濾分數大於0.6的結果 - 保持原有檢索邏輯
             filtered_docs = [(doc, score) for doc, score in docs_with_scores if score > 0.6]
 
             if not filtered_docs:
                 print(f"[INFO] 未找到相關分數大於0.6的內容，回傳空結果")
-                return "", None  # 直接返回空字符串，而不是使用备选检索
+                return "", None  # 直接返回空字串，而不是使用備選檢索
                 
-            # 从metadata中提取路径并通过key_map查找对应内容
+            # 從metadata中提取路徑並通過key_map查找對應內容
             section_paths = []
-            # 保存第一个文档的分数（最高分）用于定位判断
+            # 保存第一個文檔的分數（最高分）用於定位判斷
             first_doc_score = filtered_docs[0][1] if filtered_docs else 0
             
             for doc, score in filtered_docs:
@@ -338,24 +338,24 @@ class RagRetriever(QObject):
             
             if not section_paths:
                 print("[WARNING] 未找到對應的section路徑")
-                return "", None  # 同样直接返回空字符串
+                return "", None  # 同樣直接返回空字串
                 
-            # 构建检索到的章节内容
+            # 建立檢索到的章節內容
             retrieved_sections = {}
             for path in section_paths:
-                # 解析路径获取节点
+                # 解析路徑取得節點
                 node = self._get_node_from_path(rag_tree, path)
                 if node:
-                    # 使用路径作为键，避免重复
+                    # 使用路徑作為鍵，避免重複
                     retrieved_sections[path] = node
                     
-                    # 查找紧邻的公式块
+                    # 查找緊鄰的公式區塊
                     self._add_adjacent_formulas(rag_tree, path, retrieved_sections)
             
-            # 初始化滚动信息为None
+            # 初始化滾動資訊為None
             scroll_info = None
             
-            # 只有当第一个检索结果分数大于0.65时才生成滚动信息
+            # 只有當第一個檢索結果分數大於0.65時才產生滾動資訊
             if first_doc_score > 0.65 and section_paths:
                 first_path = section_paths[0]
                 first_node = retrieved_sections.get(first_path)
@@ -365,20 +365,20 @@ class RagRetriever(QObject):
             else:
                 print(f"[INFO] 不啟動定位功能，首個結果分數: {first_doc_score:.4f}")
                 
-            # 按照路径顺序排序
+            # 按照路徑順序排序
             sorted_paths = sorted(retrieved_sections.keys())
             
-            # 构建最终结果字符串
+            # 建立最終結果字串
             result_parts = ["以下是論文中與您問題最相關的內容:"]
 
             for path in sorted_paths:
                 node = retrieved_sections[path]
-                # 构建完整的路径层次标题
+                # 建立完整的路徑層次標題
                 section_title = self._build_section_title(rag_tree, path)
                 
                 result_parts.append(f"\n## {section_title}")
                 
-                # 添加节点内容
+                # 新增節點內容
                 if node.get('type') == 'text':
                     result_parts.append(node.get('translated_content', '') or node.get('content', ''))
                 elif node.get('type') == 'formula':
@@ -403,37 +403,37 @@ class RagRetriever(QObject):
             
         except Exception as e:
             print(f"[ERROR] 結構化檢索失敗: {str(e)}")
-            return "", None  # 发生异常也直接返回空字符串和None
+            return "", None  # 發生異常也直接返回空字串和None
 
     def _create_scroll_info(self, path: str, node: Dict, rag_tree: Dict) -> Dict:
         """
-        创建滚动定位信息
+        建立滾動定位資訊
         
         Args:
-            path: 节点路径
-            node: 节点数据
-            rag_tree: RAG树结构
+            path: 節點路徑
+            node: 節點資料
+            rag_tree: RAG樹結構
             
         Returns:
-            Dict: 滚动定位信息
+            Dict: 滾動定位資訊
         """
-        # 默认滚动信息
+        # 預設滾動資訊
         scroll_info = {
-            'is_title': False,  # 是否是标题
-            'zh_content': '',   # 中文内容
-            'en_content': '',   # 英文内容
-            'node_type': node.get('type', 'unknown')  # 节点类型
+            'is_title': False,  # 是否是標題
+            'zh_content': '',   # 中文內容
+            'en_content': '',   # 英文內容
+            'node_type': node.get('type', 'unknown')  # 節點類型
         }
         
-        # 处理节点类型
+        # 處理節點類型
         if 'type' not in node:
-            # 可能是章节节点，需要找到标题
+            # 可能是章節節點，需要找到標題
             if path.startswith('/sections/'):
                 parts = path.split('/')
-                # 对于章节节点，设置为标题类型
+                # 對於章節節點，設定為標題類型
                 scroll_info['is_title'] = True
                 
-                # 获取章节标题
+                # 取得章節標題
                 if 'title' in node:
                     scroll_info['en_content'] = node['title']
                 if 'translated_title' in node:
@@ -441,7 +441,7 @@ class RagRetriever(QObject):
                 
                 return scroll_info
         
-        # 根据节点类型设置内容
+        # 根據節點類型設定內容
         if node.get('type') == 'text':
             scroll_info['en_content'] = node.get('content', '')
             scroll_info['zh_content'] = node.get('translated_content', '')
@@ -449,7 +449,7 @@ class RagRetriever(QObject):
             scroll_info['en_content'] = node.get('caption', '')
             scroll_info['zh_content'] = node.get('translated_caption', '')
         elif node.get('type') == 'formula':
-            # 公式内容在中英文中相同
+            # 公式內容在中英文中相同
             scroll_info['en_content'] = node.get('content', '')
             scroll_info['zh_content'] = node.get('content', '')
         
@@ -457,24 +457,24 @@ class RagRetriever(QObject):
 
     def _get_node_from_path(self, tree: Dict, path: str) -> Dict:
         """
-        从路径获取节点内容
+        從路徑取得節點內容
         
         Args:
-            tree: rag_tree结构
-            path: 节点路径，如 /sections/0/content/2
+            tree: rag_tree結構
+            path: 節點路徑，如 /sections/0/content/2
             
         Returns:
-            Dict: 节点内容
+            Dict: 節點內容
         """
         try:
-            # 移除开头的斜杠
+            # 移除開頭的斜線
             if path.startswith('/'):
                 path = path[1:]
                 
-            # 分割路径
+            # 分割路徑
             parts = path.split('/')
             
-            # 从树的根开始遍历
+            # 從樹的根開始遍歷
             node = tree
             for part in parts:
                 if part.isdigit():
@@ -493,25 +493,25 @@ class RagRetriever(QObject):
     
     def _add_adjacent_formulas(self, tree: Dict, path: str, retrieved_sections: Dict) -> None:
         """
-        添加紧邻的公式块
+        新增緊鄰的公式區塊
         
         Args:
-            tree: rag_tree结构
-            path: 当前节点路径
-            retrieved_sections: 已检索的章节字典
+            tree: rag_tree結構
+            path: 目前節點路徑
+            retrieved_sections: 已檢索的章節字典
         """
         try:
-            # 解析路径
+            # 解析路徑
             if not path or not path.startswith('/'):
                 return
                 
             parts = path.split('/')
-            # 处理如 /sections/0/content/2 格式的路径
+            # 處理如 /sections/0/content/2 格式的路徑
             if len(parts) >= 5 and parts[-2] == 'content':
                 current_index = int(parts[-1])
                 base_path = '/'.join(parts[:-1])
                 
-                # 检查前面的块
+                # 檢查前面的區塊
                 if current_index > 0:
                     prev_path = f"{base_path}/{current_index - 1}"
                     prev_node = self._get_node_from_path(tree, prev_path)
@@ -519,54 +519,54 @@ class RagRetriever(QObject):
                     if prev_node.get('type') == 'formula':
                         retrieved_sections[prev_path] = prev_node
                 
-                # 检查后面的块
+                # 檢查後面的區塊
                 next_path = f"{base_path}/{current_index + 1}"
                 next_node = self._get_node_from_path(tree, next_path)
                 
                 if next_node and next_node.get('type') == 'formula':
                     retrieved_sections[next_path] = next_node
         except Exception as e:
-            print(f"[ERROR] 新增相鄰公式塊失敗: {str(e)}")
+            print(f"[ERROR] 新增相鄰公式區塊失敗: {str(e)}")
     
     def _build_section_title(self, tree: Dict, path: str) -> str:
         """
-        构建完整的章节标题
+        建立完整的章節標題
         
         Args:
-            tree: rag_tree结构
-            path: 节点路径
+            tree: rag_tree結構
+            path: 節點路徑
             
         Returns:
-            str: 完整的章节标题
+            str: 完整的章節標題
         """
         try:
-            # 移除开头的斜杠
+            # 移除開頭的斜線
             if path.startswith('/'):
                 path = path[1:]
                 
-            # 分割路径
+            # 分割路徑
             parts = path.split('/')
             
-            # 对于sections路径，构建章节标题
+            # 對於sections路徑，建立章節標題
             if len(parts) >= 2 and parts[0] == 'sections':
                 section_index = int(parts[1])
                 
-                # 获取章节
+                # 取得章節
                 if 'sections' in tree and section_index < len(tree['sections']):
                     section = tree['sections'][section_index]
                     
-                    # 优先使用翻译标题，否则使用原标题
+                    # 優先使用翻譯標題，否則使用原標題
                     title = section.get('translated_title', '') or section.get('title', '')
                     
-                    # 如果有子章节
+                    # 如果有子章節
                     if len(parts) >= 4 and parts[2] == 'children':
                         child_index = int(parts[3])
                         
-                        # 获取子章节
+                        # 取得子章節
                         if 'children' in section and child_index < len(section['children']):
                             child = section['children'][child_index]
                             
-                            # 子章节标题
+                            # 子章節標題
                             child_title = child.get('translated_title', '') or child.get('title', '')
                             
                             if child_title:
@@ -574,7 +574,7 @@ class RagRetriever(QObject):
                     
                     return title
             
-            # 如果无法构建标题，返回简单路径描述
+            # 如果無法建立標題，返回簡單路徑描述
             return f"章節 {path}"
         except Exception as e:
             print(f"[ERROR] 建置章節標題失敗: {str(e)}")
