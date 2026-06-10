@@ -6,10 +6,10 @@ from openai import OpenAI
 from langchain_huggingface import HuggingFaceEmbeddings
 
 # API配置
-#API_BASE_URL = "http://127.0.0.1:1234/v1"
-API_BASE_URL = "https://api.openai.com/v1"
+API_BASE_URL = "http://192.168.1.104:1234/v1"
+#API_BASE_URL = "https://api.openai.com/v1"
 
-API_KEY = "your_api_key"  # 替換為你的API密鑰
+API_KEY = ""  # 替換為你的API密鑰
 
 # 嵌入模型配置
 EMBEDDING_MODEL_NAME = "BAAI/bge-m3"
@@ -79,9 +79,12 @@ class LLMClient:
         """
         try:
             response = self.client.chat.completions.create(
+                model="google/gemma-3-12b",
+                #model="qwen/qwen3-coder-30b",
+                #model="gpt-oss-20b@q6_k",
                 #model="llama-breeze2-8b-instruct-text-i1@q6_k",
                 #model="llama-breeze2-8b-instruct-text-i1@q4_k_m",
-                model="gpt-4o-mini-2024-07-18",
+                #model="gpt-4o-mini-2024-07-18",
                 #model="deepseek-chat",
                 messages=messages,
                 temperature=temperature,
@@ -119,9 +122,12 @@ class LLMClient:
         """
         try:
             response = self.client.chat.completions.create(
+                model="google/gemma-3-12b",
+                #model="qwen/qwen3-coder-30b",
+                #model="gpt-oss-20b@q6_k",
                 #model="llama-breeze2-8b-instruct-text-i1@q6_k",
                 #model="llama-breeze2-8b-instruct-text-i1@q4_k_m",
-                model="gpt-4o-mini-2024-07-18",
+                #model="gpt-4o-mini-2024-07-18",
                 #model="deepseek-chat",
                 messages=messages,
                 temperature=temperature,

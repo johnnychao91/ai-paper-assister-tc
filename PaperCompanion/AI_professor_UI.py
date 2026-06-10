@@ -3,7 +3,7 @@ import sys
 import subprocess
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, 
                            QHBoxLayout, QPushButton, QSplitter, 
-                           QLabel, QFrame)
+                           QLabel, QFrame, QFileDialog)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 
@@ -430,6 +430,26 @@ class AIProfessorUI(QMainWindow):
         self.pdf_button.clicked.connect(self.toggle_pdf)
         self.pdf_button.setShortcut("Ctrl+P")
         self.pdf_button.setToolTip("View Original PDF")
+
+        self.export_pdf_button = QPushButton("重新匯出成PDF")
+        self.export_pdf_button.setObjectName("exportPdfButton")
+        self.export_pdf_button.setStyleSheet("""
+            #exportPdfButton {
+                background-color: rgba(255, 152, 0, 0.35);
+                color: white;
+                border: 1px solid rgba(255, 152, 0, 0.65);
+                border-radius: 8px;
+                padding: 5px 15px;
+                font-weight: bold;
+            }
+            #exportPdfButton:hover {
+                background-color: rgba(255, 152, 0, 0.55);
+            }
+        """)
+        self.export_pdf_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.export_pdf_button.clicked.connect(self.export_markdown_pdf)
+        self.export_pdf_button.setShortcut("Ctrl+Shift+P")
+        self.export_pdf_button.setToolTip("重新匯出目前Markdown為PDF")
         
         # 添加到布局
         toolbar_layout.addWidget(doc_title, 0, Qt.AlignmentFlag.AlignLeft)
@@ -438,6 +458,7 @@ class AIProfessorUI(QMainWindow):
         combo_layout.setContentsMargins(0, 0, 0, 0)
         combo_layout.addWidget(self.lang_button)
         combo_layout.addWidget(self.pdf_button)
+        combo_layout.addWidget(self.export_pdf_button)
         toolbar_layout.addWidget(combo_widget, 0, Qt.AlignmentFlag.AlignRight)
         
         return toolbar
@@ -623,6 +644,47 @@ class AIProfessorUI(QMainWindow):
         else:
             self.statusBar().showMessage("未載入論文或未指定PDF路徑")
         pass
+
+    def export_markdown_pdf(self):
+        """將目前畫面的Markdown重新匯出為PDF"""
+        current_paper = self.data_manager.current_paper
+        if not current_paper or not current_paper.get('id'):
+            self.statusBar().showMessage("未載入論文，無法匯出PDF")
+            return
+
+        current_lang = self.md_view.get_current_language()
+        lang_suffix = "zh" if current_lang == "zh" else "en"
+        paper_id = current_paper.get('id', 'paper')
+        default_dir = os.path.join(self.data_manager.output_dir, paper_id)
+        os.makedirs(default_dir, exist_ok=True)
+        default_path = os.path.join(default_dir, f"{paper_id}_{lang_suffix}_rerender.pdf")
+
+        save_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "重新匯出成PDF",
+            default_path,
+            "PDF Files (*.pdf)"
+        )
+
+        if not save_path:
+            self.statusBar().showMessage("已取消PDF匯出")
+            return
+
+        if not save_path.lower().endswith('.pdf'):
+            save_path += '.pdf'
+
+        self.export_pdf_button.setEnabled(False)
+        self.statusBar().showMessage("正在匯出PDF，請稍候...")
+        self.md_view.export_current_view_to_pdf(save_path, self._on_markdown_pdf_export_finished)
+
+    def _on_markdown_pdf_export_finished(self, success: bool, file_path: str, error_message: str):
+        """接收Markdown PDF匯出結果"""
+        self.export_pdf_button.setEnabled(True)
+        if success:
+            self.statusBar().showMessage(f"PDF匯出成功: {file_path}")
+        else:
+            message = error_message or "未知錯誤"
+            self.statusBar().showMessage(f"PDF匯出失敗: {message}")
 
     def toggle_language(self):
         """

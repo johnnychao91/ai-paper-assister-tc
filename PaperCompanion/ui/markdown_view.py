@@ -1,9 +1,10 @@
 import os
 import markdown
 import json
+from typing import Callable, Optional
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEnginePage
-from PyQt6.QtCore import QUrl, pyqtSignal
+from PyQt6.QtCore import QUrl, pyqtSignal, QTimer
 from ..data_manager import DataManager
 from ..paths import get_font_path, get_asset_path
 
@@ -33,6 +34,9 @@ class MarkdownView(QWebEngineView):
         self.current_lang = "zh"  # 默认为中文
         self.docs = {"en": "", "zh": ""}
         self.current_visible_content = None
+        self._pdf_export_page = None
+        self._pdf_export_path = ""
+        self._pdf_export_callback = None
         
         # 设置自定义页面
         custom_page = CustomWebEnginePage(self)
@@ -249,7 +253,6 @@ class MarkdownView(QWebEngineView):
     def _handle_add_scroll_listener_result(self, result):
         """处理添加滚动监听器的结果"""
         # 设置定时检查滚动通知变量
-        from PyQt6.QtCore import QTimer
         self.scroll_check_timer = QTimer(self)
         self.scroll_check_timer.timeout.connect(self.check_scroll_notification)
         self.scroll_check_timer.start(300)  # 每300ms检查一次
@@ -497,72 +500,96 @@ class MarkdownView(QWebEngineView):
     def set_data_manager(self, data_manager):
         """设置数据管理器引用"""
         self.data_manager = data_manager
-    
-    def _render_markdown(self):
-        """
-        渲染Markdown内容为HTML
-        
-        将当前语言的Markdown内容转换为HTML并使用KaTeX显示LaTeX公式
-        """
-        # 检查当前语言是否有内容
-        if not self.docs[self.current_lang]:
-            # 如果当前语言没有内容，显示简单提示
-            html_content = f"<p>沒有可用的{self.current_lang}內容</p>" if self.current_lang == "zh" else "<p>No content available in English</p>"
-        else:
-            # 预处理Markdown内容，处理图片路径
-            content = self.docs[self.current_lang]
-            
-            # 使用增强的markdown配置，添加arithmatex扩展专门处理LaTeX公式
-            html_content = markdown.markdown(
-                content,
-                extensions=[
-                    'tables', 'fenced_code', 'codehilite', 'extra',
-                    'pymdownx.arithmatex'  # 专门处理LaTeX的扩展
-                ],
-                extension_configs={
-                    'pymdownx.arithmatex': {
-                        'generic': True  # 让KaTeX接管所有LaTeX处理
-                    }
+
+    def _markdown_to_html(self, lang: str) -> str:
+        """將指定語言的Markdown內容轉為HTML片段"""
+        if not self.docs.get(lang):
+            return f"<p>沒有可用的{lang}內容</p>" if lang == "zh" else "<p>No content available in English</p>"
+
+        content = self.docs[lang]
+        return markdown.markdown(
+            content,
+            extensions=[
+                'tables', 'fenced_code', 'codehilite', 'extra',
+                'pymdownx.arithmatex'
+            ],
+            extension_configs={
+                'pymdownx.arithmatex': {
+                    'generic': True
                 }
-            )
-        
-        # 获取字体路径
+            }
+        )
+
+    def _get_base_url(self, lang: Optional[str] = None):
+        """取得目前文件的基底路徑，供相對路徑資源載入使用"""
+        target_lang = lang or self.current_lang
+        base_url = None
+
+        if hasattr(self, 'data_manager') and self.data_manager and self.data_manager.current_paper:
+            paper = self.data_manager.current_paper
+            paper_path = paper.get('paths', {}).get(f'article_{target_lang}', '')
+            if paper_path:
+                paper_dir = os.path.dirname(os.path.join(self.data_manager.output_dir, paper_path))
+                base_url = QUrl.fromLocalFile(paper_dir + '/')
+
+        if not base_url:
+            katex_dir = os.path.dirname(os.path.dirname(get_asset_path("katex/katex.min.js")))
+            base_url = QUrl.fromLocalFile(katex_dir + '/')
+
+        return base_url
+
+    def _build_full_html(self, lang: str, export_zoom_factor: float = 1.0,
+                         include_export_zoom: bool = False) -> str:
+        """構建完整HTML，供畫面渲染與PDF匯出共用"""
+        html_content = self._markdown_to_html(lang)
+
         font_path_regular = get_font_path("SourceHanSerifCN-Regular-1.otf")
         font_path_bold = get_font_path("SourceHanSerifCN-Bold-2.otf")
-        
-        # 替换CSS中的字体URL为绝对路径
+
         css_with_paths = self.css.replace("FONT_PATH_REGULAR", font_path_regular.replace(os.sep, '/'))
         css_with_paths = css_with_paths.replace("FONT_PATH_BOLD", font_path_bold.replace(os.sep, '/'))
 
-        # 获取KaTeX资源的本地路径
         katex_css_path = get_asset_path("katex/katex.min.css")
         katex_js_path = get_asset_path("katex/katex.min.js")
         katex_autorender_path = get_asset_path("katex/contrib/auto-render.min.js")
-        
-        # 将路径转换为本地文件URL
+
         katex_css_url = QUrl.fromLocalFile(katex_css_path).toString()
         katex_js_url = QUrl.fromLocalFile(katex_js_path).toString()
         katex_autorender_url = QUrl.fromLocalFile(katex_autorender_path).toString()
-        
-        # 构建完整HTML，使用KaTeX进行LaTeX支持
-        full_html = f"""
+
+        export_zoom_css = ""
+        if include_export_zoom:
+            zoom_factor = max(0.25, min(float(export_zoom_factor), 5.0))
+            export_zoom_css = f"""
+            <style>
+                html {{
+                    font-size: {zoom_factor:.3f}em;
+                }}
+                body {{
+                    zoom: {zoom_factor:.3f};
+                    transform-origin: top left;
+                }}
+            </style>
+            """
+
+        return f"""
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             {css_with_paths}
-            
+            {export_zoom_css}
+
             <!-- KaTeX CSS -->
             <link rel="stylesheet" href="{katex_css_url}">
-            
+
             <!-- KaTeX JS -->
             <script defer src="{katex_js_url}"></script>
             <script defer src="{katex_autorender_url}"></script>
             <script>
                 document.addEventListener("DOMContentLoaded", function() {{
                     renderMathInElement(document.body, {{
-                        // 自定义分隔符
                         delimiters: [
                             {{left: '$$', right: '$$', display: true}},
                             {{left: '$', right: '$', display: false}},
@@ -582,30 +609,118 @@ class MarkdownView(QWebEngineView):
         </body>
         </html>
         """
+    
+    def _render_markdown(self):
+        """
+        渲染Markdown内容为HTML
         
-        # 获取当前文档的基本路径作为基本URL
-        base_url = None
-        if hasattr(self, 'data_manager') and self.data_manager and self.data_manager.current_paper:
-            paper = self.data_manager.current_paper
-            paper_path = paper.get('paths', {}).get(f'article_{self.current_lang}', '')
-            if paper_path:
-                paper_dir = os.path.dirname(os.path.join(
-                    self.data_manager.output_dir,
-                    paper_path
-                ))
-                base_url = QUrl.fromLocalFile(paper_dir + '/')
-        
-        # 如果没有找到基本URL（如欢迎界面的情况），使用资源目录作为基本URL
-        if not base_url:
-            # 获取assets/katex所在目录的上级目录作为基本URL
-            katex_dir = os.path.dirname(os.path.dirname(get_asset_path("katex/katex.min.js")))
-            base_url = QUrl.fromLocalFile(katex_dir + '/')
+        将当前语言的Markdown内容转换为HTML并使用KaTeX显示LaTeX公式
+        """
+        full_html = self._build_full_html(
+            self.current_lang,
+            export_zoom_factor=1.0,
+            include_export_zoom=False
+        )
+        base_url = self._get_base_url(self.current_lang)
         
         # 设置HTML内容及基本URL
         if base_url:
             self.setHtml(full_html, base_url)
         else:
             self.setHtml(full_html)
+
+    def export_current_view_to_pdf(self, pdf_path: str,
+                                   on_finished: Optional[Callable[[bool, str, str], None]] = None):
+        """匯出目前顯示中的Markdown為PDF，保留當下語言與縮放倍率"""
+        if not pdf_path:
+            if on_finished:
+                on_finished(False, pdf_path, "未提供輸出路徑")
+            return
+
+        if self._pdf_export_page is not None:
+            if on_finished:
+                on_finished(False, pdf_path, "已有進行中的PDF匯出作業")
+            return
+
+        try:
+            zoom_factor = self.zoomFactor()
+        except Exception:
+            zoom_factor = 1.0
+
+        self._pdf_export_path = pdf_path
+        self._pdf_export_callback = on_finished
+        self._pdf_export_page = CustomWebEnginePage(self)
+        self._pdf_export_page.loadFinished.connect(self._on_pdf_export_page_loaded)
+        self._pdf_export_page.pdfPrintingFinished.connect(self._on_pdf_export_finished)
+
+        export_html = self._build_full_html(
+            self.current_lang,
+            export_zoom_factor=zoom_factor,
+            include_export_zoom=True
+        )
+        base_url = self._get_base_url(self.current_lang)
+
+        if base_url:
+            self._pdf_export_page.setHtml(export_html, base_url)
+        else:
+            self._pdf_export_page.setHtml(export_html)
+
+    def _on_pdf_export_page_loaded(self, success: bool):
+        """暫存頁面載入完成後開始列印PDF"""
+        if not success:
+            self._finalize_pdf_export(False, "PDF頁面載入失敗")
+            return
+
+        # 等待KaTeX等前端腳本完成渲染後再匯出
+        QTimer.singleShot(500, self._print_export_page_to_pdf)
+
+    def _print_export_page_to_pdf(self):
+        """執行PDF輸出"""
+        if not self._pdf_export_page or not self._pdf_export_path:
+            self._finalize_pdf_export(False, "PDF匯出狀態遺失")
+            return
+
+        try:
+            self._pdf_export_page.printToPdf(self._pdf_export_path)
+        except Exception as e:
+            self._finalize_pdf_export(False, f"PDF匯出失敗: {e}")
+
+    def _on_pdf_export_finished(self, file_path: str, success: bool):
+        """接收PDF輸出完成事件"""
+        if success:
+            self._finalize_pdf_export(True, "")
+        else:
+            self._finalize_pdf_export(False, f"PDF匯出失敗: {file_path}")
+
+    def _cleanup_pdf_export_page(self):
+        """釋放匯出用暫存頁面與訊號"""
+        if not self._pdf_export_page:
+            return
+
+        try:
+            self._pdf_export_page.loadFinished.disconnect(self._on_pdf_export_page_loaded)
+        except TypeError:
+            pass
+
+        try:
+            self._pdf_export_page.pdfPrintingFinished.disconnect(self._on_pdf_export_finished)
+        except TypeError:
+            pass
+
+        self._pdf_export_page.deleteLater()
+        self._pdf_export_page = None
+
+    def _finalize_pdf_export(self, success: bool, error_message: str):
+        """統一收尾匯出流程並回傳結果"""
+        callback = self._pdf_export_callback
+        file_path = self._pdf_export_path
+
+        self._cleanup_pdf_export_page()
+        self._pdf_export_path = ""
+        self._pdf_export_callback = None
+
+        if callback:
+            callback(success, file_path, error_message)
             
     def get_current_visible_text(self):
         """
